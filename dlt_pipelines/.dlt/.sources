@@ -1,0 +1,40 @@
+engine_version: 1
+sources:
+  scraping:
+    is_dirty: false
+    last_commit_sha: dabe7bf88c1189ec6c7932516dfb94afce0ab226
+    last_commit_timestamp: '2025-08-05T16:40:20+02:00'
+    files:
+      scraping/README.md:
+        commit_sha: dabe7bf88c1189ec6c7932516dfb94afce0ab226
+        git_sha: 37aa6100d232871cca18916c2174dc20090162ff
+        sha3_256: de57eee478fb5258238660978b07b9e20625e80c7e2910eb52de51febf037ac0
+      scraping/helpers.py:
+        commit_sha: dabe7bf88c1189ec6c7932516dfb94afce0ab226
+        git_sha: 23a9a4ff5c0ad0d9474d3caef95d8623a3e6c141
+        sha3_256: 427eb7b8ace98e0a5a7c9cde38ab5eaebab7b171bd6b36a59474cb4adbf15e33
+      scraping/runner.py:
+        commit_sha: dabe7bf88c1189ec6c7932516dfb94afce0ab226
+        git_sha: ca3cce878f084ea9a30bd7883280bb4feec37a59
+        sha3_256: 6990ba31c6cfe4ae5e43a59fcf2acc9defb9a142014343287edca14aba574466
+      scraping/types.py:
+        commit_sha: dabe7bf88c1189ec6c7932516dfb94afce0ab226
+        git_sha: 93cf1d82b7a4933fb2e97a2cb8fec23ace99e9e9
+        sha3_256: b1243f453c6f444d3cbc1d2e24bd5075003ca82e6f8bc28351e4dff10ff613e4
+      scraping/diagram.png:
+        commit_sha: dabe7bf88c1189ec6c7932516dfb94afce0ab226
+        git_sha: eebf6f7fdf11dc827eba0f02345f084e92620c7e
+        sha3_256: 59418198777dbc6b376407cf8081028f90f99c9960c643a1f8365ab4a7a33593
+      scraping/__init__.py:
+        commit_sha: dabe7bf88c1189ec6c7932516dfb94afce0ab226
+        git_sha: b76ae094fe4828bc4cd0ecd80f5a4aba75c86caf
+        sha3_256: 98bc16575af0efc8ac2eaeab1126d3670d49b6185948b1355dbed2a38d4667a2
+      scraping/settings.py:
+        commit_sha: dabe7bf88c1189ec6c7932516dfb94afce0ab226
+        git_sha: e722dafdfcce0f34a9ba742e4e32553d9a0a7699
+        sha3_256: 8742fa449bbc77ba9815b022b89e1932316752da98672d6f4e1bb202a52d7801
+      scraping/queue.py:
+        commit_sha: dabe7bf88c1189ec6c7932516dfb94afce0ab226
+        git_sha: 2e02bd602cd42a9c2dcf89647e0a9912e248b313
+        sha3_256: a81a1493d26057290adc7f96a8a5ca317d02242981286ea22079be7e4fdcf164
+    dlt_version_constraint: '>=0.5.1'
