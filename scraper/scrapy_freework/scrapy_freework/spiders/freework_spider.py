@@ -74,7 +74,7 @@ class FreeworkSpider(scrapy.Spider):
         """Validate URL format."""
         try:
             parsed = urlparse(url)
-            return bool(parsed.scheme and parsed.netloc)
+            return bool(parsed.scheme in ("http", "https") and parsed.netloc)
         except Exception:
             return False
 
@@ -170,6 +170,55 @@ class FreeworkSpider(scrapy.Spider):
             "0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z": "location",
         }
 
+    def _process_salary_field(self, value):
+        """Process salary field and split salary/daily rate."""
+        result = {"salary": "", "daily_rate": ""}
+
+        if "€⁄an" in value and "€⁄j" in value:
+            parts = value.split(", ")
+            if len(parts) == 2:
+                result["salary"] = parts[0].strip()
+                result["daily_rate"] = parts[1].strip()
+            else:
+                result["salary"] = value
+        elif "€⁄j" in value:
+            result["daily_rate"] = value
+        elif "€⁄an" in value:
+            result["salary"] = value
+        else:
+            result["salary"] = value
+
+        return result
+
+    def _clean_text(self, text):
+        """Clean and normalize text."""
+        if text is None:
+            return ""
+        if isinstance(text, str):
+            # Replace non-breaking space with regular space
+            cleaned = text.replace("\xa0", " ")
+            return cleaned.strip()
+        return str(text).strip()
+
+    def _process_contract_types(self, contract_list):
+        """Process contract types list."""
+        return [text.strip() for text in contract_list if text.strip()]
+
+    def _process_skills(self, skills_list):
+        """Process skills list."""
+        return [skill.strip() for skill in skills_list if skill.strip()]
+
+    def _process_description(self, paragraphs):
+        """Process description paragraphs."""
+        return [para.strip() for para in paragraphs if para.strip()]
+
+    def _match_icon_to_field(self, svg_path, mapping):
+        """Match SVG icon path to field name."""
+        for path_start, field_name in mapping.items():
+            if svg_path.startswith(path_start):
+                return field_name
+        return None
+
     def parse_job_detail(self, response):
         """Parse une page individuelle d'emploi et extrait les détails."""
         self.logger.info(f"Parsing job detail: {response.url}")
@@ -196,39 +245,25 @@ class FreeworkSpider(scrapy.Spider):
                 if svg_path and value:
                     value = value.strip()
 
-                    # Chercher le mapping basé sur le début du path SVG
-                    field_type = None
-                    for path_start, field_name in icon_mapping.items():
-                        if svg_path.startswith(path_start):
-                            field_type = field_name
-                            break
+                    # Use extracted method for icon matching
+                    field_type = self._match_icon_to_field(svg_path, icon_mapping)
 
                     if field_type:
                         if field_type == "salary":
-                            # Gérer le cas où salaire et TJM sont combinés
-                            if "€⁄an" in value and "€⁄j" in value:
-                                parts = value.split(", ")
-                                if len(parts) == 2:
-                                    sidebar_data["salary"] = parts[0].strip()
-                                    sidebar_data["daily_rate"] = parts[1].strip()
-                                else:
-                                    sidebar_data["salary"] = value
-                            elif "€⁄j" in value:
-                                sidebar_data["daily_rate"] = value
-                            elif "€⁄an" in value:
-                                sidebar_data["salary"] = value
+                            # Use extracted method for salary processing
+                            salary_data = self._process_salary_field(value)
+                            sidebar_data.update(salary_data)
                         else:
-                            sidebar_data[field_type] = value
+                            sidebar_data[field_type] = self._clean_text(value)
 
         # Extraire les autres détails
         try:
             company_name = response.css("p.font-semibold.text-sm::text").get()
             company_name = company_name.strip() if company_name else ""
 
-            contract_types = [
-                text.strip()
-                for text in response.css("div.tags span.tag div.truncate::text").getall()
-            ]
+            contract_types = self._process_contract_types(
+                response.css("div.tags span.tag div.truncate::text").getall()
+            )
             description = response.css("div.html-renderer.prose-content").getall()
             # description = ' '.join(description).strip() if description else ''
 
@@ -246,8 +281,7 @@ class FreeworkSpider(scrapy.Spider):
             )
 
             # Technologies/compétences
-            skills = response.css("a.tag div.truncate::text").getall()
-            skills = [skill.strip() for skill in skills]
+            skills = self._process_skills(response.css("a.tag div.truncate::text").getall())
 
             yield {
                 "job_title": job_title.strip() if job_title else "",

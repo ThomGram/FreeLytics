@@ -1,7 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from scrapy_freework.spiders.freework_spider import FreeworkSpider
 
@@ -19,7 +19,8 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
     def test_generate_start_urls_with_valid_config(self):
         """Test URL generation with a valid configuration file."""
-        with patch.object(self.spider, "logger"):
+        # Mock logger using property patch
+        with patch.object(type(self.spider), "logger", new_callable=MagicMock):
             with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
                 mock_path.return_value.exists.return_value = True
 
@@ -42,7 +43,7 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
     def test_generate_start_urls_missing_config_file(self):
         """Test behavior when config file is missing."""
-        with patch.object(self.spider, "logger") as mock_logger:
+        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
             with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
                 mock_path.return_value.exists.return_value = False
 
@@ -53,7 +54,7 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
     def test_generate_start_urls_invalid_config_section(self):
         """Test behavior when config file is missing required section."""
-        with patch.object(self.spider, "logger") as mock_logger:
+        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
             with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
                 mock_path.return_value.exists.return_value = True
 
@@ -69,7 +70,7 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
     def test_generate_start_urls_missing_required_keys(self):
         """Test behavior when config file is missing required keys."""
-        with patch.object(self.spider, "logger") as mock_logger:
+        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
             with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
                 mock_path.return_value.exists.return_value = True
 
@@ -88,39 +89,45 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
     def test_generate_start_urls_empty_base_url(self):
         """Test behavior when base_url is empty."""
-        with patch.object(self.spider, "logger") as mock_logger:
-            with self._mock_valid_config_structure():
-                with patch("configparser.ConfigParser.get") as mock_get:
-                    mock_get.side_effect = lambda section, key: {
-                        ("freework", "jobs"): '["data scientist"]',
-                        ("freework", "locations"): '["fr~~~"]',
-                        ("freework", "contracts"): '["permanent"]',
-                        ("freework", "base_url"): "",
-                    }.get((section, key))
+        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
+            with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
+                mock_path.return_value.exists.return_value = True
 
-                    urls = self.spider.generate_start_urls()
+                with self._mock_valid_config_structure():
+                    with patch("configparser.ConfigParser.get") as mock_get:
+                        mock_get.side_effect = lambda section, key: {
+                            ("freework", "jobs"): '["data scientist"]',
+                            ("freework", "locations"): '["fr~~~"]',
+                            ("freework", "contracts"): '["permanent"]',
+                            ("freework", "base_url"): "",
+                        }.get((section, key))
 
-                    self.assertEqual(urls, [])
-                    mock_logger.error.assert_called_with("base_url is empty in config file")
+                        urls = self.spider.generate_start_urls()
+
+                        self.assertEqual(urls, [])
+                        mock_logger.error.assert_called_with("base_url is empty in config file")
 
     def test_generate_start_urls_invalid_base_url_scheme(self):
         """Test behavior when base_url is missing scheme."""
-        with patch.object(self.spider, "logger") as mock_logger:
-            with self._mock_valid_config_structure():
-                with patch("configparser.ConfigParser.get") as mock_get:
-                    mock_get.side_effect = lambda section, key: {
-                        ("freework", "jobs"): '["data scientist"]',
-                        ("freework", "locations"): '["fr~~~"]',
-                        ("freework", "contracts"): '["permanent"]',
-                        ("freework", "base_url"): "www.example.com",
-                    }.get((section, key))
+        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
+            with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
+                mock_path.return_value.exists.return_value = True
 
-                    urls = self.spider.generate_start_urls()
+                with self._mock_valid_config_structure():
+                    with patch("configparser.ConfigParser.get") as mock_get:
+                        mock_get.side_effect = lambda section, key: {
+                            ("freework", "jobs"): '["data scientist"]',
+                            ("freework", "locations"): '["fr~~~"]',
+                            ("freework", "contracts"): '["permanent"]',
+                            ("freework", "base_url"): "www.example.com",
+                        }.get((section, key))
 
-                    self.assertEqual(urls, [])
-                    mock_logger.error.assert_called_with(
-                        "base_url missing scheme (http/https): www.example.com"
-                    )
+                        urls = self.spider.generate_start_urls()
+
+                        self.assertEqual(urls, [])
+                        mock_logger.error.assert_called_with(
+                            "base_url missing scheme (http/https): www.example.com"
+                        )
 
     def test_is_valid_url(self):
         """Test URL validation logic."""
