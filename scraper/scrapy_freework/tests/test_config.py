@@ -50,7 +50,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
                 urls = self.spider.generate_start_urls()
 
                 self.assertEqual(urls, [])
-                mock_logger.error.assert_called_with("Config file not found: ../../FreeLytics.cfg")
+                mock_logger.error.assert_called_with(
+                    "Config file not found: ../../../FreeLytics.cfg"
+                )
 
     def test_generate_start_urls_invalid_config_section(self):
         """Test behavior when config file is missing required section."""

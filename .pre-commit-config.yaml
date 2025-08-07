@@ -60,3 +60,10 @@ repos:
         language: system
         files: scrapy_freework/settings\.py$
         pass_filenames: false
+
+      - id: pytest
+        name: Run tests
+        entry: uv run pytest scraper/scrapy_freework/tests/ -v --tb=short
+        language: system
+        files: ^scraper/scrapy_freework/(scrapy_freework|tests)/.*\.py$
+        pass_filenames: false
