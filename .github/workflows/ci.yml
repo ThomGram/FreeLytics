@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9, 3.10, 3.11, 3.12]
+        python-version: [3.12]
 
     steps:
     - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
 
     - name: Install dependencies with uv
       run: |
-        uv sync --dev
+        uv sync --extra test --extra dev
 
     - name: Lint with ruff (if available)
       run: |
@@ -43,7 +43,7 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        cd scraper/scrapy_freework && uv run pytest tests/ -v --tb=short --cov=scrapy_freework --cov-report=xml --cov-report=term
+        uv run pytest --cov=scraper/scrapy_freework/scrapy_freework --cov-report=xml --cov-report=term
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
@@ -68,7 +68,7 @@ jobs:
 
     - name: Install dependencies with uv
       run: |
-        uv sync --dev
+        uv sync --extra test --extra dev
 
     - name: Check code formatting with black
       run: uv run black --check --diff scraper/scrapy_freework/scrapy_freework/ scraper/scrapy_freework/tests/
@@ -94,7 +94,7 @@ jobs:
 
     - name: Install dependencies with uv
       run: |
-        uv sync --dev
+        uv sync --extra test --extra dev
 
     - name: Run bandit security scan
       run: uv run bandit -r scraper/scrapy_freework/scrapy_freework/ -f json -o bandit-report.json || echo "Security scan completed"
@@ -105,7 +105,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
