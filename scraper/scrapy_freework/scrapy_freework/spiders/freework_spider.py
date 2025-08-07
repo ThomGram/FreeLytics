@@ -1,5 +1,6 @@
 import ast
 import configparser
+import re
 from itertools import product
 from pathlib import Path
 from urllib.parse import urlparse
@@ -8,13 +9,42 @@ import scrapy
 
 
 class FreeworkSpider(scrapy.Spider):
+    """
+    FreeworkSpider with built-in HTTP 429 (rate limiting) handling.
+
+    Features:
+    - Automatic retry on 429 errors with exponential backoff
+    - Configurable delays between requests
+    - AutoThrottle for adaptive rate limiting
+    - Browser-like headers to appear more legitimate
+
+    To use more aggressive rate limiting, run with:
+    scrapy crawl freework -s SETTINGS_MODULE=settings_rate_limit
+    """
+
     name = "freework"
+
+    # Custom settings to handle rate limiting
+    custom_settings = {
+        "DOWNLOAD_DELAY": 2,  # 2 second delay between requests
+        "RANDOMIZE_DOWNLOAD_DELAY": 0.5,  # Randomize delay (1.5 to 2.5 seconds)
+        "CONCURRENT_REQUESTS": 1,  # Limit concurrent requests
+        "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
+        "RETRY_TIMES": 3,  # Retry failed requests up to 3 times
+        "RETRY_HTTP_CODES": [429, 500, 502, 503, 504, 408, 522, 524],
+        "AUTOTHROTTLE_ENABLED": True,  # Enable AutoThrottle
+        "AUTOTHROTTLE_START_DELAY": 2,
+        "AUTOTHROTTLE_MAX_DELAY": 30,  # Maximum 30 second delay
+        "AUTOTHROTTLE_TARGET_CONCURRENCY": 1.0,
+        "AUTOTHROTTLE_DEBUG": False,  # Disable verbose throttling logs
+        "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }
 
     def generate_start_urls(self):
         """Génère les URLs de départ depuis le fichier de config."""
         try:
             config = configparser.ConfigParser()
-            config_path = "../../FreeLytics.cfg"
+            config_path = "../../../FreeLytics.cfg"
 
             # Check if config file exists
             if not Path(config_path).exists():
@@ -51,20 +81,27 @@ class FreeworkSpider(scrapy.Spider):
                 self.logger.error(f"base_url missing scheme (http/https): {base_url}")
                 return []
 
-            # Generate URLs
-            urls = []
+            # Generate URLs with metadata
+            url_data = []
             for job, location, contract in product(jobs, locations, contracts):
                 url = f"{base_url}{job}&locations={location}&contracts={contract}"
 
                 # Validate each generated URL
                 if self.is_valid_url(url):
-                    urls.append(url)
+                    url_data.append(
+                        {
+                            "url": url,
+                            "job_category": job,
+                            "location_filter": location,
+                            "contract_filter": contract,
+                        }
+                    )
                     self.logger.info(f"Generated URL: {url}")
                 else:
                     self.logger.warning(f"Invalid URL generated: {url}")
 
-            self.logger.info(f"Generated {len(urls)} valid URLs")
-            return urls
+            self.logger.info(f"Generated {len(url_data)} valid URLs")
+            return url_data
 
         except Exception as e:
             self.logger.error(f"Error generating start URLs: {e}")
@@ -80,14 +117,22 @@ class FreeworkSpider(scrapy.Spider):
 
     def start_requests(self):
         """Méthode Scrapy standard pour générer les requêtes initiales."""
-        urls = self.generate_start_urls()
+        url_data_list = self.generate_start_urls()
 
-        if not urls:
+        if not url_data_list:
             self.logger.error("No valid URLs generated. Check your configuration file.")
             return
 
-        for url in urls:
-            yield scrapy.Request(url=url, callback=self.parse)
+        for url_data in url_data_list:
+            yield scrapy.Request(
+                url=url_data["url"],
+                callback=self.parse,
+                meta={
+                    "job_category": url_data["job_category"],
+                    "location_filter": url_data["location_filter"],
+                    "contract_filter": url_data["contract_filter"],
+                },
+            )
 
     def get_total_pages_simple(self, response):
         """Version simple et efficace pour free-work.com."""
@@ -104,6 +149,12 @@ class FreeworkSpider(scrapy.Spider):
         return 1
 
     def parse(self, response):
+        # Handle HTTP 429 and other error codes
+        if response.status == 429:
+            self.logger.warning(f"Rate limited (429) on search page: {response.url}")
+            # Don't process 429 responses, let retry middleware handle it
+            return
+
         self.logger.info(f"Parsing search results: {response.url}")
 
         # Ajuste si besoin selon la structure réelle
@@ -115,18 +166,25 @@ class FreeworkSpider(scrapy.Spider):
             yield scrapy.Request(
                 url=job_url,
                 callback=self.parse_job_detail,
+                meta=response.meta,  # Pass through the metadata from the search page
             )
 
-        # # Pagination - continuer vers les pages suivantes
-        # total_pages = self.get_total_pages_simple(response)
-        # current_page = int(re.search(r'page=(\d+)', response.url).group(1)) if 'page=' in response.url else 1
+        # Pagination - continuer vers les pages suivantes
+        total_pages = self.get_total_pages_simple(response)
+        current_page = (
+            int(re.search(r"page=(\d+)", response.url).group(1)) if "page=" in response.url else 1
+        )
 
-        # self.logger.info(f"Page {current_page}/{total_pages} - {len(job_links)} job links found")
+        self.logger.info(f"Page {current_page}/{total_pages}")
 
-        # if current_page < total_pages:
-        #     next_page = current_page + 1
-        #     next_url = f"{response.url}&page={next_page}" if 'page=' not in response.url else re.sub(r'page=\d+', f'page={next_page}', response.url)
-        #     yield scrapy.Request(next_url, callback=self.parse)
+        if current_page < total_pages:
+            next_page = current_page + 1
+            next_url = (
+                f"{response.url}&page={next_page}"
+                if "page=" not in response.url
+                else re.sub(r"page=\d+", f"page={next_page}", response.url)
+            )
+            yield scrapy.Request(next_url, callback=self.parse, meta=response.meta)
 
     def get_icon_field_mapping(self):
         """Map SVG path patterns to field types based on icon recognition."""
@@ -219,8 +277,17 @@ class FreeworkSpider(scrapy.Spider):
                 return field_name
         return None
 
+    # List of HTTP status codes that should be handled instead of filtered out
+    handle_httpstatus_list = [429, 500, 502, 503, 504]
+
     def parse_job_detail(self, response):
         """Parse une page individuelle d'emploi et extrait les détails."""
+        # Handle HTTP 429 and other error codes
+        if response.status == 429:
+            self.logger.warning(f"Rate limited (429) on job detail: {response.url}")
+            # Don't process 429 responses, let retry middleware handle it
+            return
+
         self.logger.info(f"Parsing job detail: {response.url}")
 
         # Récupérer le titre
@@ -286,6 +353,7 @@ class FreeworkSpider(scrapy.Spider):
             yield {
                 "job_title": job_title.strip() if job_title else "",
                 "job_url": response.url,
+                "job_category": response.meta.get("job_category", ""),
                 "company_name": company_name,
                 "contract_types": contract_types,
                 "description": description,
@@ -304,4 +372,9 @@ class FreeworkSpider(scrapy.Spider):
         except Exception as e:
             self.logger.error(f"Error parsing job detail {response.url}: {e}")
             # En cas d'erreur, yield au moins les informations de base
-            yield {"ad_title": job_title, "job_url": response.url, "error": f"Parsing error: {e}"}
+            yield {
+                "ad_title": job_title,
+                "job_url": response.url,
+                "job_category": response.meta.get("job_category", ""),
+                "error": f"Parsing error: {e}",
+            }
