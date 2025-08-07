@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [ dev, main ]
+  pull_request:
+    branches: [ dev, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+
+    - name: Cache uv dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+
+    - name: Install dependencies with uv
+      run: |
+        uv sync --extra test --extra dev
+
+    - name: Lint with ruff (if available)
+      run: |
+        uv run ruff check scraper/scrapy_freework/scrapy_freework/ scraper/scrapy_freework/tests/ || echo "Linting completed with warnings"
+      continue-on-error: true
+
+    - name: Run tests with pytest
+      run: |
+        uv run pytest --cov=scraper/scrapy_freework/scrapy_freework --cov-report=xml --cov-report=term
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+
+    - name: Install dependencies with uv
+      run: |
+        uv sync --extra test --extra dev
+
+    - name: Check code formatting with black
+      run: uv run black --check --diff scraper/scrapy_freework/scrapy_freework/ scraper/scrapy_freework/tests/
+
+    - name: Check import sorting with isort
+      run: uv run isort --check-only --diff scraper/scrapy_freework/scrapy_freework/ scraper/scrapy_freework/tests/
+
+    - name: Lint with ruff
+      run: uv run ruff check scraper/scrapy_freework/scrapy_freework/ scraper/scrapy_freework/tests/
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+
+    - name: Install dependencies with uv
+      run: |
+        uv sync --extra test --extra dev
+
+    - name: Run bandit security scan
+      run: uv run bandit -r scraper/scrapy_freework/scrapy_freework/ -f json -o bandit-report.json || echo "Security scan completed"
+      continue-on-error: true
+
+    - name: Check dependencies for known vulnerabilities
+      run: uv run safety check --json --output safety-report.json || echo "Safety check completed"
+      continue-on-error: true
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
