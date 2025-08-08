@@ -90,3 +90,38 @@ class TestDataframeCleaner:
         df = pd.DataFrame(job_data)
         result = DataframeCleaner.remove_duplicates(df)
         assert len(result) == 1
+
+    def test_split_pay(self):
+        """Test function used to split the tjm and salary into min/max column."""
+        job_data = {
+            "job_title": [
+                "Python Developer",
+                "Python Developer",
+                "Python Developer",
+                "Python Developer",
+            ],
+            "location": ["Paris", "Paris", "Paris", "Paris"],
+            "salary": ["45k €⁄an", "", "49k-60k €⁄an", ""],
+            "daily_rate": ["380-580 €⁄j", "550 €⁄j", "", ""],
+        }
+        df = pd.DataFrame(job_data)
+        df = DataframeCleaner.split_revenue_to_min_max(df)
+        assert df["salary_min"].iloc[0] == "45000"
+        assert df["salary_max"].iloc[0] == "45000"
+        assert df["daily_rate_min"].iloc[0] == "380"
+        assert df["daily_rate_max"].iloc[0] == "580"
+
+        assert df["salary_min"].iloc[1] == ""
+        assert df["salary_max"].iloc[1] == ""
+        assert df["daily_rate_min"].iloc[1] == "550"
+        assert df["daily_rate_max"].iloc[1] == "550"
+
+        assert df["salary_min"].iloc[2] == "49000"
+        assert df["salary_max"].iloc[2] == "60000"
+        assert df["daily_rate_min"].iloc[2] == ""
+        assert df["daily_rate_max"].iloc[2] == ""
+
+        assert df["salary_min"].iloc[3] == ""
+        assert df["salary_max"].iloc[3] == ""
+        assert df["daily_rate_min"].iloc[3] == ""
+        assert df["daily_rate_max"].iloc[3] == ""
