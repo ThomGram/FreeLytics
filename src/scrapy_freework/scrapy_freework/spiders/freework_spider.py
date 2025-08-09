@@ -44,7 +44,7 @@ class FreeworkSpider(scrapy.Spider):
         """Génère les URLs de départ depuis le fichier de config."""
         try:
             config = configparser.ConfigParser()
-            config_path = "../../../FreeLytics.cfg"
+            config_path = "/opt/airflow/FreeLytics.cfg"
 
             # Check if config file exists
             if not Path(config_path).exists():

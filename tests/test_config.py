@@ -55,7 +55,7 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
                 self.assertEqual(urls, [])
                 mock_logger.error.assert_called_with(
-                    "Config file not found: ../../../FreeLytics.cfg"
+                    "Config file not found: /opt/airflow/FreeLytics.cfg"
                 )
 
     def test_generate_start_urls_invalid_config_section(self):

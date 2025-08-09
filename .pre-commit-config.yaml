@@ -34,7 +34,7 @@ repos:
     hooks:
       - id: bandit
         args: ["-r"]
-        files: ^src/
+        files: ^(src|airflow/dags)/
         exclude: tests/
 
   # General pre-commit hooks

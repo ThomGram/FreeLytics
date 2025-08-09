@@ -20,5 +20,6 @@ RUN uv sync
 COPY src/ /opt/airflow/src/
 COPY data/ /opt/airflow/data/
 COPY airflow/dags/ /opt/airflow/dags/
+COPY FreeLytics.cfg /opt/airflow/
 
 WORKDIR /opt/airflow
