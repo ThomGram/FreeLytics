@@ -1,11 +1,62 @@
 import re
-from typing import Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 from loguru import logger
 
 
 class DataframeCleaner:
+
+    @staticmethod
+    def _validate_dataframe(df: pd.DataFrame, operation_name: str) -> pd.DataFrame:
+        """Common validation for DataFrame inputs."""
+        if df is None:
+            error_msg = f"DataFrame is None for {operation_name}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        if len(df) == 0:
+            logger.info(f"DataFrame is empty for {operation_name}, returning as is")
+            return df.copy()
+
+        return df.copy()
+
+    @staticmethod
+    def _apply_column_transformation(
+        df: pd.DataFrame,
+        column_name: str,
+        transform_func: Callable[[Any], Any],
+        operation_name: str,
+        new_columns: Optional[Dict[str, str]] = None,
+    ) -> pd.DataFrame:
+        """Apply transformation to a column with common error handling."""
+        try:
+            result_df = DataframeCleaner._validate_dataframe(df, operation_name)
+            if len(result_df) == 0:
+                return result_df
+
+            if column_name not in result_df.columns:
+                logger.warning(f"No {column_name} column found for {operation_name}")
+                return result_df
+
+            # Apply transformation
+            transformed_data = result_df[column_name].apply(transform_func)
+
+            # Handle single column transformation
+            if new_columns is None:
+                result_df[column_name] = transformed_data
+            else:
+                # Handle multi-column transformation
+                for i, (new_col, _) in enumerate(new_columns.items()):
+                    result_df[new_col] = [data[i] for data in transformed_data]
+
+            logger.info(f"Successfully applied {operation_name}")
+            return result_df
+
+        except Exception as e:
+            error_msg = f"Unexpected error in {operation_name}: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
 
     @staticmethod
     def remove_duplicates(
@@ -65,20 +116,24 @@ class DataframeCleaner:
             raise ValueError(error_msg) from e
 
     @staticmethod
-    def revenue_string_to_min_max(revenue: str) -> Dict[str, str]:
+    def revenue_string_to_min_max(revenue: Union[str, float, Any]) -> Dict[str, str]:
         """
         Convert revenue string to min/max values.
 
         Args:
-            revenue: String like "45k €⁄an", "380-580 €⁄j", "49k-60k €⁄an"
+            revenue: String like "45k €⁄an", "380-580 €⁄j", "49k-60k €⁄an", or NaN/None
 
         Returns:
             Dict with 'min' and 'max' keys containing string values
         """
-        if not revenue or revenue.strip() == "":
+        if pd.isna(revenue) or not revenue or (isinstance(revenue, str) and revenue.strip() == ""):
             return {"min": "", "max": ""}
 
-        revenue = revenue.strip()
+        revenue = str(revenue).strip()
+
+        # Handle the specific case of space in numbers like "45 003-55k" -> "45-55k"
+        # This handles cases where there's a space in the first number of a range
+        revenue = re.sub(r"(\d+)\s+(\d+)(-\d+k)", r"\1\3", revenue, flags=re.IGNORECASE)
 
         # Remove currency symbols and units
         clean_revenue = re.sub(r"[€⁄anjk\s]", "", revenue)
@@ -164,65 +219,60 @@ class DataframeCleaner:
         """
         logger.info("Cleaning publication dates")
 
-        try:
-            if df is None or len(df) == 0:
-                return df.copy() if df is not None else df
+        def parse_publication_date(
+            date_str,
+        ) -> Tuple[Union[pd.Timestamp, Any], Union[pd.Timestamp, Any]]:
+            if (
+                pd.isna(date_str)
+                or not date_str
+                or (isinstance(date_str, str) and date_str.strip() == "")
+            ):
+                return pd.NaT, pd.NaT
 
-            result_df = df.copy()
+            date_str = str(date_str).strip()
 
-            if "publication_date" not in result_df.columns:
-                logger.warning("No publication_date column found")
-                return result_df
+            # Check for update date pattern
+            if " - Mise à jour le " in date_str:
+                parts = date_str.split(" - Mise à jour le ")
+                pub_part = parts[0]
+                update_part = parts[1]
 
-            # Initialize update_date column
-            result_df["update_date"] = pd.NaT
+                # Extract publication date
+                pub_match = re.search(r"Publiée le (\d{2}/\d{2}/\d{4})", pub_part)
+                pub_date = (
+                    pd.to_datetime(pub_match.group(1), format="%d/%m/%Y") if pub_match else pd.NaT
+                )
 
-            def parse_publication_date(date_str):
-                if not date_str or date_str.strip() == "":
-                    return pd.NaT, pd.NaT
+                # Extract update date
+                update_date = pd.to_datetime(update_part, format="%d/%m/%Y")
 
-                date_str = date_str.strip()
+                return pub_date, update_date
+            else:
+                # Single publication date
+                pub_match = re.search(r"Publiée le (\d{2}/\d{2}/\d{4})", date_str)
+                pub_date = (
+                    pd.to_datetime(pub_match.group(1), format="%d/%m/%Y") if pub_match else pd.NaT
+                )
+                return pub_date, pd.NaT
 
-                # Check for update date pattern
-                if " - Mise à jour le " in date_str:
-                    parts = date_str.split(" - Mise à jour le ")
-                    pub_part = parts[0]
-                    update_part = parts[1]
-
-                    # Extract publication date
-                    pub_match = re.search(r"Publiée le (\d{2}/\d{2}/\d{4})", pub_part)
-                    pub_date = (
-                        pd.to_datetime(pub_match.group(1), format="%d/%m/%Y")
-                        if pub_match
-                        else pd.NaT
-                    )
-
-                    # Extract update date
-                    update_date = pd.to_datetime(update_part, format="%d/%m/%Y")
-
-                    return pub_date, update_date
-                else:
-                    # Single publication date
-                    pub_match = re.search(r"Publiée le (\d{2}/\d{2}/\d{4})", date_str)
-                    pub_date = (
-                        pd.to_datetime(pub_match.group(1), format="%d/%m/%Y")
-                        if pub_match
-                        else pd.NaT
-                    )
-                    return pub_date, pd.NaT
-
-            # Apply parsing to each row
-            parsed_dates = result_df["publication_date"].apply(parse_publication_date)
-            result_df["publication_date"] = [date_tuple[0] for date_tuple in parsed_dates]
-            result_df["update_date"] = [date_tuple[1] for date_tuple in parsed_dates]
-
-            logger.info("Successfully cleaned publication dates")
+        # Initialize update_date column first
+        result_df = DataframeCleaner._validate_dataframe(df, "publication date cleaning")
+        if len(result_df) == 0:
             return result_df
 
-        except Exception as e:
-            error_msg = f"Unexpected error cleaning publication dates: {str(e)}"
-            logger.error(error_msg)
-            raise ValueError(error_msg) from e
+        if "publication_date" not in result_df.columns:
+            logger.warning("No publication_date column found")
+            return result_df
+
+        result_df["update_date"] = pd.NaT
+
+        return DataframeCleaner._apply_column_transformation(
+            result_df,
+            "publication_date",
+            parse_publication_date,
+            "publication date cleaning",
+            {"publication_date": "pub_date", "update_date": "update_date"},
+        )
 
     @staticmethod
     def start_date_cleaning(df: pd.DataFrame) -> pd.DataFrame:
@@ -236,59 +286,56 @@ class DataframeCleaner:
         """
         logger.info("Cleaning start dates")
 
-        try:
-            if df is None or len(df) == 0:
-                return df.copy() if df is not None else df
+        def parse_start_date(date_str) -> Tuple[Union[pd.Timestamp, Any], Union[bool, Any]]:
+            if (
+                pd.isna(date_str)
+                or not date_str
+                or (isinstance(date_str, str) and date_str.strip() == "")
+            ):
+                return pd.NaT, pd.NA
 
-            result_df = df.copy()
+            date_str = str(date_str).strip()
 
-            if "start_date" not in result_df.columns:
-                logger.warning("No start_date column found")
-                return result_df
+            # Check for ASAP indicators
+            asap_indicators = [
+                "dès que possible",
+                "asap",
+                "immédiatement",
+                "immediately",
+                "tout de suite",
+                "maintenant",
+                "disponible",
+            ]
 
-            # Initialize start_date_asap column
-            result_df["start_date_asap"] = pd.NA
+            if any(indicator in date_str.lower() for indicator in asap_indicators):
+                return pd.NaT, True
 
-            def parse_start_date(date_str):
-                if not date_str or date_str.strip() == "":
-                    return pd.NaT, pd.NA
+            # Try to parse as date DD/MM/YYYY
+            try:
+                parsed_date = pd.to_datetime(date_str, format="%d/%m/%Y")
+                return parsed_date, False
+            except (ValueError, TypeError):
+                # If parsing fails, treat as unknown
+                return pd.NaT, pd.NA
 
-                date_str = date_str.strip()
-
-                # Check for ASAP indicators
-                asap_indicators = [
-                    "dès que possible",
-                    "asap",
-                    "immédiatement",
-                    "immediately",
-                    "tout de suite",
-                    "maintenant",
-                    "disponible",
-                ]
-
-                if any(indicator in date_str.lower() for indicator in asap_indicators):
-                    return pd.NaT, True
-
-                # Try to parse as date DD/MM/YYYY
-                try:
-                    parsed_date = pd.to_datetime(date_str, format="%d/%m/%Y")
-                    return parsed_date, False
-                except (ValueError, TypeError):
-                    # If parsing fails, treat as unknown
-                    return pd.NaT, pd.NA
-
-            # Apply parsing to each row
-            parsed_dates = result_df["start_date"].apply(parse_start_date)
-            result_df["start_date"] = [date_tuple[0] for date_tuple in parsed_dates]
-            result_df["start_date_asap"] = [date_tuple[1] for date_tuple in parsed_dates]
-
-            logger.info("Successfully cleaned start dates")
+        # Initialize start_date_asap column first
+        result_df = DataframeCleaner._validate_dataframe(df, "start date cleaning")
+        if len(result_df) == 0:
             return result_df
 
-        except Exception as e:
-            error_msg = f"Unexpected error cleaning start dates: {str(e)}"
-            logger.error(error_msg)
-            raise ValueError(error_msg) from e
+        if "start_date" not in result_df.columns:
+            logger.warning("No start_date column found")
+            return result_df
+
+        result_df["start_date_asap"] = pd.NA
+
+        return DataframeCleaner._apply_column_transformation(
+            result_df,
+            "start_date",
+            parse_start_date,
+            "start date cleaning",
+            {"start_date": "parsed_date", "start_date_asap": "asap_flag"},
+        )
 
     @staticmethod
     def standardize_duration(df: pd.DataFrame) -> pd.DataFrame:
@@ -303,53 +350,50 @@ class DataframeCleaner:
         """
         logger.info("Standardizing duration to days")
 
-        try:
-            if df is None or len(df) == 0:
-                return df.copy() if df is not None else df
+        def parse_duration(duration_str) -> Union[float, Any]:
+            if (
+                pd.isna(duration_str)
+                or not duration_str
+                or (isinstance(duration_str, str) and duration_str.strip() == "")
+            ):
+                return pd.NA
 
-            result_df = df.copy()
+            duration_str = str(duration_str).strip().lower()
 
-            if "duration" not in result_df.columns:
-                logger.warning("No duration column found")
-                return result_df
+            # Extract number and unit
+            match = re.match(r"(\d+(?:\.\d+)?)\s*(\w+)", duration_str)
+            if not match:
+                return pd.NA
 
-            def parse_duration(duration_str):
-                if not duration_str or duration_str.strip() == "":
-                    return pd.NA
+            value = float(match.group(1))
+            unit = match.group(2)
 
-                duration_str = duration_str.strip().lower()
+            # Convert to days
+            if unit in ["jour", "jours", "day", "days", "j"]:
+                return value
+            elif unit in ["semaine", "semaines", "week", "weeks", "s"]:
+                return value * 7
+            elif unit in ["mois", "month", "months", "m"]:
+                return value * 30  # Average days per month
+            elif unit in ["an", "ans", "année", "années", "year", "years", "y"]:
+                return value * 365
+            else:
+                # Unknown unit, return NaN
+                return pd.NA
 
-                # Extract number and unit
-                match = re.match(r"(\d+(?:\.\d+)?)\s*(\w+)", duration_str)
-                if not match:
-                    return pd.NA
-
-                value = float(match.group(1))
-                unit = match.group(2)
-
-                # Convert to days
-                if unit in ["jour", "jours", "day", "days", "j"]:
-                    return value
-                elif unit in ["semaine", "semaines", "week", "weeks", "s"]:
-                    return value * 7
-                elif unit in ["mois", "month", "months", "m"]:
-                    return value * 30  # Average days per month
-                elif unit in ["an", "ans", "année", "années", "year", "years", "y"]:
-                    return value * 365
-                else:
-                    # Unknown unit, return NaN
-                    return pd.NA
-
-            # Apply parsing to each row
-            result_df["duration_days"] = result_df["duration"].apply(parse_duration)
-
-            logger.info("Successfully standardized duration to days")
+        result_df = DataframeCleaner._validate_dataframe(df, "duration standardization")
+        if len(result_df) == 0:
             return result_df
 
-        except Exception as e:
-            error_msg = f"Unexpected error standardizing duration: {str(e)}"
-            logger.error(error_msg)
-            raise ValueError(error_msg) from e
+        if "duration" not in result_df.columns:
+            logger.warning("No duration column found")
+            return result_df
+
+        # Apply transformation and add new column
+        result_df["duration_days"] = result_df["duration"].apply(parse_duration)
+
+        logger.info("Successfully standardized duration to days")
+        return result_df
 
     @staticmethod
     def parse_company_description(df: pd.DataFrame) -> pd.DataFrame:
@@ -364,69 +408,65 @@ class DataframeCleaner:
         """
         logger.info("Parsing company descriptions")
 
-        try:
-            if df is None or len(df) == 0:
-                return df.copy() if df is not None else df
+        def parse_description(desc_str) -> Tuple[Union[str, Any], Union[str, Any], Union[str, Any]]:
+            if (
+                pd.isna(desc_str)
+                or not desc_str
+                or (isinstance(desc_str, str) and desc_str.strip() == "")
+            ):
+                return pd.NA, pd.NA, pd.NA
 
-            result_df = df.copy()
+            desc_str = str(desc_str).strip()
 
-            if "company_description" not in result_df.columns:
-                logger.warning("No company_description column found")
-                return result_df
+            # Split by commas and clean whitespace
+            parts = [part.strip() for part in desc_str.split(",")]
+            # Remove empty parts
+            parts = [part for part in parts if part]
 
-            # Initialize new columns
-            result_df["company_location"] = pd.NA
-            result_df["company_size"] = pd.NA
-            result_df["company_type"] = pd.NA
+            location = pd.NA
+            size = pd.NA
+            company_type = pd.NA
 
-            def parse_description(desc_str):
-                if not desc_str or desc_str.strip() == "":
-                    return pd.NA, pd.NA, pd.NA
+            if len(parts) == 4:
+                # 4 parts: first 2 are location, third is size, fourth is type
+                location = f"{parts[0]}, {parts[1]}"
+                size = parts[2]
+                company_type = parts[3]
+            elif len(parts) == 3:
+                # 3 parts: first is location, second is size, third is type
+                location = parts[0]
+                size = parts[1]
+                company_type = parts[2]
+            elif len(parts) == 2:
+                # 2 parts: first is size, second is type
+                size = parts[0]
+                company_type = parts[1]
+            elif len(parts) == 1:
+                # 1 part: it's the type
+                company_type = parts[0]
 
-                desc_str = desc_str.strip()
+            return location, size, company_type
 
-                # Split by commas and clean whitespace
-                parts = [part.strip() for part in desc_str.split(",")]
-                # Remove empty parts
-                parts = [part for part in parts if part]
-
-                location = pd.NA
-                size = pd.NA
-                company_type = pd.NA
-
-                if len(parts) == 4:
-                    # 4 parts: first 2 are location, third is size, fourth is type
-                    location = f"{parts[0]}, {parts[1]}"
-                    size = parts[2]
-                    company_type = parts[3]
-                elif len(parts) == 3:
-                    # 3 parts: first is location, second is size, third is type
-                    location = parts[0]
-                    size = parts[1]
-                    company_type = parts[2]
-                elif len(parts) == 2:
-                    # 2 parts: first is size, second is type
-                    size = parts[0]
-                    company_type = parts[1]
-                elif len(parts) == 1:
-                    # 1 part: it's the type
-                    company_type = parts[0]
-
-                return location, size, company_type
-
-            # Apply parsing to each row
-            parsed_data = result_df["company_description"].apply(parse_description)
-            result_df["company_location"] = [data[0] for data in parsed_data]
-            result_df["company_size"] = [data[1] for data in parsed_data]
-            result_df["company_type"] = [data[2] for data in parsed_data]
-
-            logger.info("Successfully parsed company descriptions")
+        # Initialize new columns first
+        result_df = DataframeCleaner._validate_dataframe(df, "company description parsing")
+        if len(result_df) == 0:
             return result_df
 
-        except Exception as e:
-            error_msg = f"Unexpected error parsing company descriptions: {str(e)}"
-            logger.error(error_msg)
-            raise ValueError(error_msg) from e
+        if "company_description" not in result_df.columns:
+            logger.warning("No company_description column found")
+            return result_df
+
+        result_df["company_location"] = pd.NA
+        result_df["company_size"] = pd.NA
+        result_df["company_type"] = pd.NA
+
+        return DataframeCleaner._apply_column_transformation(
+            result_df,
+            "company_description",
+            parse_description,
+            "company description parsing",
+            {"company_location": "location", "company_size": "size", "company_type": "type"},
+        )
 
     @staticmethod
     def contract_types_one_hot_encoding(df: pd.DataFrame) -> pd.DataFrame:
@@ -440,20 +480,24 @@ class DataframeCleaner:
         """
         logger.info("Converting contract types to one-hot encoding")
 
+        result_df = DataframeCleaner._validate_dataframe(df, "contract types one-hot encoding")
+        if len(result_df) == 0:
+            return result_df
+
+        if "contract_types" not in result_df.columns:
+            logger.warning("No contract_types column found")
+            return result_df
+
         try:
-            if df is None or len(df) == 0:
-                return df.copy() if df is not None else df
-
-            result_df = df.copy()
-
-            if "contract_types" not in result_df.columns:
-                logger.warning("No contract_types column found")
-                return result_df
-
             # Find all unique contract types in the dataset
             all_contract_types = set()
             for contract_str in result_df["contract_types"]:
-                if contract_str and contract_str.strip():
+                if (
+                    not pd.isna(contract_str)
+                    and contract_str
+                    and (not isinstance(contract_str, str) or contract_str.strip())
+                ):
+                    contract_str = str(contract_str)
                     # Split by comma and clean whitespace
                     types = [t.strip() for t in contract_str.split(",")]
                     types = [t for t in types if t]  # Remove empty strings
@@ -466,7 +510,12 @@ class DataframeCleaner:
 
             # Fill boolean columns based on contract_types values
             for idx, contract_str in enumerate(result_df["contract_types"]):
-                if contract_str and contract_str.strip():
+                if (
+                    not pd.isna(contract_str)
+                    and contract_str
+                    and (not isinstance(contract_str, str) or contract_str.strip())
+                ):
+                    contract_str = str(contract_str)
                     # Split by comma and clean whitespace
                     types = [t.strip() for t in contract_str.split(",")]
                     types = [t for t in types if t]  # Remove empty strings

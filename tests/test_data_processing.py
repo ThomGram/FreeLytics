@@ -1,134 +1,137 @@
-import sys
-import unittest
-from pathlib import Path
+import pytest
 
 from src.scrapy_freework.scrapy_freework.spiders.freework_spider import FreeworkSpider
 
-# Add the parent directory to the path so we can import the spider
-sys.path.append(str(Path(__file__).parent.parent))
 
+class TestDataProcessing:
+    """Test suite for FreeworkSpider data processing using pytest best practices."""
 
-class TestDataProcessing(unittest.TestCase):
-    """Tests for data processing logic in FreeworkSpider."""
+    # === FIXTURES ===
 
-    def setUp(self):
-        """Set up test fixtures."""
-        self.spider = FreeworkSpider()
+    @pytest.fixture
+    def spider(self):
+        """FreeworkSpider instance for testing."""
+        return FreeworkSpider()
 
-    def test_salary_tjm_splitting_both_present(self):
+    @pytest.fixture
+    def icon_mapping(self, spider):
+        """Icon to field mapping for testing."""
+        return spider.get_icon_field_mapping()
+
+    # === SALARY/TJM PROCESSING TESTS ===
+
+    @pytest.mark.parametrize(
+        "input_value,expected_salary,expected_daily_rate",
+        [
+            ("45k-65k €⁄an, 400-650 €⁄j", "45k-65k €⁄an", "400-650 €⁄j"),
+            ("50k €⁄an, 500 €⁄j", "50k €⁄an", "500 €⁄j"),
+            ("35k-40k €⁄an, 350-400 €⁄j", "35k-40k €⁄an", "350-400 €⁄j"),
+        ],
+    )
+    def test_salary_tjm_splitting_both_present(
+        self, spider, input_value, expected_salary, expected_daily_rate
+    ):
         """Test splitting when both salary and TJM are present."""
-        test_cases = [
-            ("45k-65k €⁄an, 400-650 €⁄j", ("45k-65k €⁄an", "400-650 €⁄j")),
-            ("50k €⁄an, 500 €⁄j", ("50k €⁄an", "500 €⁄j")),
-            ("35k-40k €⁄an, 350-400 €⁄j", ("35k-40k €⁄an", "350-400 €⁄j")),
-        ]
+        result = spider._process_salary_field(input_value)
+        assert result["salary"] == expected_salary
+        assert result["daily_rate"] == expected_daily_rate
 
-        for input_value, expected in test_cases:
-            with self.subTest(input_value=input_value):
-                result = self.spider._process_salary_field(input_value)
-                self.assertEqual(result["salary"], expected[0])
-                self.assertEqual(result["daily_rate"], expected[1])
-
-    def test_salary_tjm_splitting_salary_only(self):
-        """Test processing when only salary is present."""
-        test_cases = [
+    @pytest.mark.parametrize(
+        "input_value",
+        [
             "45k-65k €⁄an",
             "50k €⁄an",
             "35000-45000 €⁄an",
-        ]
+        ],
+    )
+    def test_salary_tjm_splitting_salary_only(self, spider, input_value):
+        """Test processing when only salary is present."""
+        result = spider._process_salary_field(input_value)
+        assert result["salary"] == input_value
+        assert result["daily_rate"] == ""
 
-        for input_value in test_cases:
-            with self.subTest(input_value=input_value):
-                result = self.spider._process_salary_field(input_value)
-                self.assertEqual(result["salary"], input_value)
-                self.assertEqual(result["daily_rate"], "")
-
-    def test_salary_tjm_splitting_tjm_only(self):
-        """Test processing when only TJM is present."""
-        test_cases = [
+    @pytest.mark.parametrize(
+        "input_value",
+        [
             "400-650 €⁄j",
             "500 €⁄j",
             "350-400 €⁄j",
-        ]
+        ],
+    )
+    def test_salary_tjm_splitting_tjm_only(self, spider, input_value):
+        """Test processing when only TJM is present."""
+        result = spider._process_salary_field(input_value)
+        assert result["salary"] == ""
+        assert result["daily_rate"] == input_value
 
-        for input_value in test_cases:
-            with self.subTest(input_value=input_value):
-                result = self.spider._process_salary_field(input_value)
-                self.assertEqual(result["salary"], "")
-                self.assertEqual(result["daily_rate"], input_value)
-
-    def test_salary_tjm_splitting_malformed_combined(self):
+    @pytest.mark.parametrize(
+        "input_value",
+        [
+            "45k-65k €⁄an 400-650 €⁄j",  # No comma separator
+            "45k-65k €⁄an, 400-650 €⁄j, bonus",  # Multiple commas
+        ],
+    )
+    def test_salary_tjm_splitting_malformed_combined(self, spider, input_value):
         """Test processing of malformed combined salary/TJM values."""
-        test_cases = [
-            # No comma separator - should be treated as salary
-            "45k-65k €⁄an 400-650 €⁄j",
-            # Multiple commas - should use the whole string as salary
-            "45k-65k €⁄an, 400-650 €⁄j, bonus",
-        ]
+        result = spider._process_salary_field(input_value)
+        assert result["salary"] == input_value
+        assert result["daily_rate"] == ""
 
-        for input_value in test_cases:
-            with self.subTest(input_value=input_value):
-                result = self.spider._process_salary_field(input_value)
-                self.assertEqual(result["salary"], input_value)
-                self.assertEqual(result["daily_rate"], "")
+    # === TEXT CLEANING TESTS ===
 
-    def test_text_cleaning_and_normalization(self):
-        """Test text cleaning and normalization."""
-        test_cases = [
-            # Basic whitespace cleaning
+    @pytest.mark.parametrize(
+        "input_value,expected",
+        [
             ("  Data Scientist  ", "Data Scientist"),
             ("\n  Senior Developer \t", "Senior Developer"),
-            # Special characters normalization
             ("35k-40k\xa0€⁄an", "35k-40k €⁄an"),
             ("Dès que possible", "Dès que possible"),
-            # Empty and None handling
             ("", ""),
             (None, ""),
-        ]
+        ],
+    )
+    def test_text_cleaning_and_normalization(self, spider, input_value, expected):
+        """Test text cleaning and normalization."""
+        result = spider._clean_text(input_value)
+        assert result == expected
 
-        for input_value, expected in test_cases:
-            with self.subTest(input_value=input_value):
-                result = self.spider._clean_text(input_value)
-                self.assertEqual(result, expected)
+    # === CONTRACT TYPES PROCESSING TESTS ===
 
-    def test_contract_types_processing(self):
-        """Test contract types extraction and cleaning."""
-        test_cases = [
+    @pytest.mark.parametrize(
+        "input_list,expected",
+        [
             (["CDI", "Freelance"], ["CDI", "Freelance"]),
             (["  CDI  ", " CDD ", ""], ["CDI", "CDD"]),  # With whitespace and empty
             ([], []),  # Empty list
-            (
-                ["Freelance", "freelance", "FREELANCE"],
-                ["Freelance", "freelance", "FREELANCE"],
-            ),  # Case variations
-        ]
+            (["Freelance", "freelance", "FREELANCE"], ["Freelance", "freelance", "FREELANCE"]),
+        ],
+    )
+    def test_contract_types_processing(self, spider, input_list, expected):
+        """Test contract types extraction and cleaning."""
+        result = spider._process_contract_types(input_list)
+        assert result == expected
 
-        for input_list, expected in test_cases:
-            with self.subTest(input_list=input_list):
-                result = self.spider._process_contract_types(input_list)
-                self.assertEqual(result, expected)
+    # === SKILLS PROCESSING TESTS ===
 
-    def test_skills_processing(self):
-        """Test skills extraction and cleaning."""
-        test_cases = [
+    @pytest.mark.parametrize(
+        "input_list,expected",
+        [
             (["Python", "SQL", "Machine Learning"], ["Python", "SQL", "Machine Learning"]),
             (["  Python  ", " SQL ", ""], ["Python", "SQL"]),  # With whitespace and empty
             ([], []),  # Empty list
-            (
-                ["Python", "python", "PYTHON"],
-                ["Python", "python", "PYTHON"],
-            ),  # Case variations preserved
-        ]
+            (["Python", "python", "PYTHON"], ["Python", "python", "PYTHON"]),  # Case preserved
+        ],
+    )
+    def test_skills_processing(self, spider, input_list, expected):
+        """Test skills extraction and cleaning."""
+        result = spider._process_skills(input_list)
+        assert result == expected
 
-        for input_list, expected in test_cases:
-            with self.subTest(input_list=input_list):
-                result = self.spider._process_skills(input_list)
-                self.assertEqual(result, expected)
+    # === DESCRIPTION PROCESSING TESTS ===
 
-    def test_description_processing(self):
-        """Test description paragraph processing."""
-        test_cases = [
-            # Multiple paragraphs
+    @pytest.mark.parametrize(
+        "input_list,expected",
+        [
             (
                 [
                     "We are looking for a data scientist.",
@@ -141,27 +144,24 @@ class TestDataProcessing(unittest.TestCase):
                     "5+ years required.",
                 ],
             ),
-            # Paragraphs with whitespace
             (
                 ["  First paragraph  ", "\n Second paragraph \t", ""],
                 ["First paragraph", "Second paragraph"],
             ),
-            # Empty input
             ([], []),
-            # Single paragraph
             (["Single description paragraph."], ["Single description paragraph."]),
-        ]
+        ],
+    )
+    def test_description_processing(self, spider, input_list, expected):
+        """Test description paragraph processing."""
+        result = spider._process_description(input_list)
+        assert result == expected
 
-        for input_list, expected in test_cases:
-            with self.subTest(input_list=input_list):
-                result = self.spider._process_description(input_list)
-                self.assertEqual(result, expected)
+    # === ICON MATCHING TESTS ===
 
-    def test_icon_path_matching(self):
-        """Test SVG icon path matching logic."""
-        mapping = self.spider.get_icon_field_mapping()
-
-        test_cases = [
+    @pytest.mark.parametrize(
+        "svg_path,expected_field",
+        [
             # Calendar icon - start date
             (
                 "M152 24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H64C28.7 64 0 92.7 0 128v16 48V448c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V192 144 128c0-35.3-28.7-64-64-64H344V24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H152V24zM48 192H400V448c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192z",
@@ -177,21 +177,51 @@ class TestDataProcessing(unittest.TestCase):
                 "M88 32C39.4 32 0 71.4 0 120V392c0 48.6 39.4 88 88 88H424c48.6 0 88-39.4 88-88V216c0-48.6-39.4-88-88-88H120c-13.3 0-24 10.7-24 24s10.7 24 24 24H424c22.1 0 40 17.9 40 40V392c0 22.1-17.9 40-40 40H88c-22.1 0-40-17.9-40-40V120c0-22.1 17.9-40 40-40H456c13.3 0 24-10.7 24-24s-10.7-24-24-24H88zM384 336a32 32 0 1 0 0-64 32 32 0 1 0 0 64z",
                 "salary",
             ),
-        ]
+        ],
+    )
+    def test_icon_path_matching(self, spider, icon_mapping, svg_path, expected_field):
+        """Test SVG icon path matching logic."""
+        result = spider._match_icon_to_field(svg_path, icon_mapping)
+        assert result == expected_field
 
-        for svg_path, expected_field in test_cases:
-            with self.subTest(svg_path=svg_path[:50] + "..."):
-                result = self.spider._match_icon_to_field(svg_path, mapping)
-                self.assertEqual(result, expected_field)
-
-    def test_icon_path_no_match(self):
+    def test_icon_path_no_match(self, spider, icon_mapping):
         """Test behavior when SVG path doesn't match any known icon."""
-        mapping = self.spider.get_icon_field_mapping()
         unknown_path = "M999 999 unknown path data that doesn't match anything"
+        result = spider._match_icon_to_field(unknown_path, icon_mapping)
+        assert result is None
 
-        result = self.spider._match_icon_to_field(unknown_path, mapping)
-        self.assertIsNone(result)
+    # === INTEGRATION TESTS ===
 
+    def test_icon_field_mapping_functionality(self, spider):
+        """Test that icon field mapping returns expected structure."""
+        mapping = spider.get_icon_field_mapping()
+        assert isinstance(mapping, dict)
+        assert len(mapping) > 0
 
-if __name__ == "__main__":
-    unittest.main()
+        # Check that all values are valid field names
+        valid_fields = {
+            "start_date",
+            "duration",
+            "salary",
+            "location",
+            "contract_types",
+            "skills",
+            "experience",
+            "remote_work",
+        }
+        for field in mapping.values():
+            assert field in valid_fields
+
+    def test_get_icon_field_mapping(self, spider):
+        """Test icon field mapping structure and content."""
+        mapping = spider.get_icon_field_mapping()
+
+        # Should be a dictionary with SVG paths as keys and field names as values
+        assert isinstance(mapping, dict)
+        assert all(isinstance(k, str) for k in mapping.keys())
+        assert all(isinstance(v, str) for v in mapping.values())
+
+        # Should contain common field mappings
+        expected_fields = {"start_date", "duration", "salary"}
+        actual_fields = set(mapping.values())
+        assert expected_fields.issubset(actual_fields)
