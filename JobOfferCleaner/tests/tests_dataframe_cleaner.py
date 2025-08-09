@@ -196,54 +196,54 @@ class TestDataframeCleaner:
         assert df["duration_days"].iloc[2] == 145.0  # "145 jours"
         assert pd.isna(df["duration_days"].iloc[3])  # Empty string
 
-    # def test_company_description_parsing(self):
-    #     job_data = {
-    #         "job_title": [
-    #             "Python Developer",
-    #             "Python Developer",
-    #             "Python Developer",
-    #             "Python Developer",
-    #             "Python Developer",
-    #             "Python Developer",
-    #         ],
-    #         "company_description": [
-    #             "< 20 salariés , Cabinet de recrutement / placement",
-    #             "ESN",
-    #             "Paris, France , 250 - 999 salariés , ESN",
-    #             "Balma, Occitanie , > 1 000 salariés , ESN",
-    #             "100 - 249 salariés , Cabinet de recrutement / placement",
-    #             "",
-    #         ],
-    #     }
-    #     df = pd.DataFrame(job_data)
-    #     df = DataframeCleaner.parse_company_description(df)
+    def test_company_description_parsing(self):
+        job_data = {
+            "job_title": [
+                "Python Developer",
+                "Python Developer",
+                "Python Developer",
+                "Python Developer",
+                "Python Developer",
+                "Python Developer",
+            ],
+            "company_description": [
+                "< 20 salariés , Cabinet de recrutement / placement",
+                "ESN",
+                "Paris, France , 250 - 999 salariés , ESN",
+                "Balma, Occitanie , > 1 000 salariés , ESN",
+                "100 - 249 salariés , Cabinet de recrutement / placement",
+                "",
+            ],
+        }
+        df = pd.DataFrame(job_data)
+        df = DataframeCleaner.parse_company_description(df)
 
-    #     # Row 0: "< 20 salariés , Cabinet de recrutement / placement"
-    #     assert pd.isna(df["company_location"].iloc[0])
-    #     assert df["company_size"].iloc[0] == "< 20 salariés"
-    #     assert df["company_type"].iloc[0] == "Cabinet de recrutement / placement"
+        # Row 0: "< 20 salariés , Cabinet de recrutement / placement"
+        assert pd.isna(df["company_location"].iloc[0])
+        assert df["company_size"].iloc[0] == "< 20 salariés"
+        assert df["company_type"].iloc[0] == "Cabinet de recrutement / placement"
 
-    #     # Row 1: "ESN"
-    #     assert pd.isna(df["company_location"].iloc[1])
-    #     assert pd.isna(df["company_size"].iloc[1])
-    #     assert df["company_type"].iloc[1] == "ESN"
+        # Row 1: "ESN"
+        assert pd.isna(df["company_location"].iloc[1])
+        assert pd.isna(df["company_size"].iloc[1])
+        assert df["company_type"].iloc[1] == "ESN"
 
-    #     # Row 2: "Paris, France , 250 - 999 salariés , ESN"
-    #     assert df["company_location"].iloc[2] == "Paris, France"
-    #     assert df["company_size"].iloc[2] == "250 - 999 salariés"
-    #     assert df["company_type"].iloc[2] == "ESN"
+        # Row 2: "Paris, France , 250 - 999 salariés , ESN"
+        assert df["company_location"].iloc[2] == "Paris, France"
+        assert df["company_size"].iloc[2] == "250 - 999 salariés"
+        assert df["company_type"].iloc[2] == "ESN"
 
-    #     # Row 3: "Balma, Occitanie , > 1 000 salariés , ESN"
-    #     assert df["company_location"].iloc[3] == "Balma, Occitanie"
-    #     assert df["company_size"].iloc[3] == "> 1 000 salariés"
-    #     assert df["company_type"].iloc[3] == "ESN"
+        # Row 3: "Balma, Occitanie , > 1 000 salariés , ESN"
+        assert df["company_location"].iloc[3] == "Balma, Occitanie"
+        assert df["company_size"].iloc[3] == "> 1 000 salariés"
+        assert df["company_type"].iloc[3] == "ESN"
 
-    #     # Row 4: "100 - 249 salariés , Cabinet de recrutement / placement"
-    #     assert pd.isna(df["company_location"].iloc[4])
-    #     assert df["company_size"].iloc[4] == "100 - 249 salariés"
-    #     assert df["company_type"].iloc[4] == "Cabinet de recrutement / placement"
+        # Row 4: "100 - 249 salariés , Cabinet de recrutement / placement"
+        assert pd.isna(df["company_location"].iloc[4])
+        assert df["company_size"].iloc[4] == "100 - 249 salariés"
+        assert df["company_type"].iloc[4] == "Cabinet de recrutement / placement"
 
-    #     # Row 5: Empty string - all fields should be missing
-    #     assert pd.isna(df["company_location"].iloc[5])
-    #     assert pd.isna(df["company_size"].iloc[5])
-    #     assert pd.isna(df["company_type"].iloc[5])
+        # Row 5: Empty string - all fields should be missing
+        assert pd.isna(df["company_location"].iloc[5])
+        assert pd.isna(df["company_size"].iloc[5])
+        assert pd.isna(df["company_type"].iloc[5])

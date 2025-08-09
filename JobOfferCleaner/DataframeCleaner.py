@@ -350,3 +350,80 @@ class DataframeCleaner:
             error_msg = f"Unexpected error standardizing duration: {str(e)}"
             logger.error(error_msg)
             raise ValueError(error_msg) from e
+
+    @staticmethod
+    def parse_company_description(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Parse company_description column to extract location, size, and type.
+
+        Handles formats like:
+        - "< 20 salariés , Cabinet de recrutement / placement" → size + type
+        - "ESN" → type only
+        - "Paris, France , 250 - 999 salariés , ESN" → location + size + type
+        - "" → all NaN
+        """
+        logger.info("Parsing company descriptions")
+
+        try:
+            if df is None or len(df) == 0:
+                return df.copy() if df is not None else df
+
+            result_df = df.copy()
+
+            if "company_description" not in result_df.columns:
+                logger.warning("No company_description column found")
+                return result_df
+
+            # Initialize new columns
+            result_df["company_location"] = pd.NA
+            result_df["company_size"] = pd.NA
+            result_df["company_type"] = pd.NA
+
+            def parse_description(desc_str):
+                if not desc_str or desc_str.strip() == "":
+                    return pd.NA, pd.NA, pd.NA
+
+                desc_str = desc_str.strip()
+
+                # Split by commas and clean whitespace
+                parts = [part.strip() for part in desc_str.split(",")]
+                # Remove empty parts
+                parts = [part for part in parts if part]
+
+                location = pd.NA
+                size = pd.NA
+                company_type = pd.NA
+
+                if len(parts) == 4:
+                    # 4 parts: first 2 are location, third is size, fourth is type
+                    location = f"{parts[0]}, {parts[1]}"
+                    size = parts[2]
+                    company_type = parts[3]
+                elif len(parts) == 3:
+                    # 3 parts: first is location, second is size, third is type
+                    location = parts[0]
+                    size = parts[1]
+                    company_type = parts[2]
+                elif len(parts) == 2:
+                    # 2 parts: first is size, second is type
+                    size = parts[0]
+                    company_type = parts[1]
+                elif len(parts) == 1:
+                    # 1 part: it's the type
+                    company_type = parts[0]
+
+                return location, size, company_type
+
+            # Apply parsing to each row
+            parsed_data = result_df["company_description"].apply(parse_description)
+            result_df["company_location"] = [data[0] for data in parsed_data]
+            result_df["company_size"] = [data[1] for data in parsed_data]
+            result_df["company_type"] = [data[2] for data in parsed_data]
+
+            logger.info("Successfully parsed company descriptions")
+            return result_df
+
+        except Exception as e:
+            error_msg = f"Unexpected error parsing company descriptions: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
