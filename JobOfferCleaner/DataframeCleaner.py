@@ -427,3 +427,62 @@ class DataframeCleaner:
             error_msg = f"Unexpected error parsing company descriptions: {str(e)}"
             logger.error(error_msg)
             raise ValueError(error_msg) from e
+
+    @staticmethod
+    def contract_types_one_hot_encoding(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Convert contract_types column to one-hot encoded boolean columns.
+
+        Handles formats like:
+        - "Freelance" → contract_Freelance: True, others: False
+        - "CDI,CDD,Freelance" → contract_CDI: True, contract_CDD: True, contract_Freelance: True
+        - "" → all contract columns: False
+        """
+        logger.info("Converting contract types to one-hot encoding")
+
+        try:
+            if df is None or len(df) == 0:
+                return df.copy() if df is not None else df
+
+            result_df = df.copy()
+
+            if "contract_types" not in result_df.columns:
+                logger.warning("No contract_types column found")
+                return result_df
+
+            # Find all unique contract types in the dataset
+            all_contract_types = set()
+            for contract_str in result_df["contract_types"]:
+                if contract_str and contract_str.strip():
+                    # Split by comma and clean whitespace
+                    types = [t.strip() for t in contract_str.split(",")]
+                    types = [t for t in types if t]  # Remove empty strings
+                    all_contract_types.update(types)
+
+            # Create boolean columns for each contract type
+            for contract_type in all_contract_types:
+                column_name = f"contract_{contract_type}"
+                result_df[column_name] = False
+
+            # Fill boolean columns based on contract_types values
+            for idx, contract_str in enumerate(result_df["contract_types"]):
+                if contract_str and contract_str.strip():
+                    # Split by comma and clean whitespace
+                    types = [t.strip() for t in contract_str.split(",")]
+                    types = [t for t in types if t]  # Remove empty strings
+
+                    # Set corresponding boolean columns to True
+                    for contract_type in types:
+                        column_name = f"contract_{contract_type}"
+                        if column_name in result_df.columns:
+                            result_df.at[idx, column_name] = True
+
+            logger.info(
+                f"Successfully created one-hot encoding for {len(all_contract_types)} contract types"
+            )
+            return result_df
+
+        except Exception as e:
+            error_msg = f"Unexpected error creating contract types one-hot encoding: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e

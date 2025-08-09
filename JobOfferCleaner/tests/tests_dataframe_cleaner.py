@@ -247,3 +247,39 @@ class TestDataframeCleaner:
         assert pd.isna(df["company_location"].iloc[5])
         assert pd.isna(df["company_size"].iloc[5])
         assert pd.isna(df["company_type"].iloc[5])
+
+    def test_contract_types_one_hot_encoding(self):
+        job_data = {
+            "job_title": [
+                "Python Developer",
+                "Python Developer",
+                "Python Developer",
+            ],
+            "contract_types": [
+                "Freelance",
+                "CDI,CDD,Freelance",
+                "",
+            ],
+        }
+        df = pd.DataFrame(job_data)
+        df = DataframeCleaner.contract_types_one_hot_encoding(df)
+
+        # Check that boolean columns are created for each contract type
+        assert "contract_CDI" in df.columns
+        assert "contract_CDD" in df.columns
+        assert "contract_Freelance" in df.columns
+
+        # Row 0: "Freelance"
+        assert not df["contract_CDI"].iloc[0]
+        assert not df["contract_CDD"].iloc[0]
+        assert df["contract_Freelance"].iloc[0]
+
+        # Row 1: "CDI,CDD,Freelance"
+        assert df["contract_CDI"].iloc[1]
+        assert df["contract_CDD"].iloc[1]
+        assert df["contract_Freelance"].iloc[1]
+
+        # Row 2: Empty string - all should be False
+        assert not df["contract_CDI"].iloc[2]
+        assert not df["contract_CDD"].iloc[2]
+        assert not df["contract_Freelance"].iloc[2]
