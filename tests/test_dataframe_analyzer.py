@@ -344,3 +344,234 @@ class TestJobAnalyzer:
                     assert stats["min"] <= stats["median"]
                 if not pd.isna(stats["median"]) and not pd.isna(stats["max"]):
                     assert stats["median"] <= stats["max"]
+
+    # === CATEGORICAL ANALYSIS TESTS ===
+
+    @pytest.fixture
+    def categorical_analysis_data(self):
+        """Fixture with comprehensive categorical data for analysis."""
+        return pd.DataFrame(
+            {
+                "job_category": [
+                    "Data Science",
+                    "Data Science",
+                    "Data Science",
+                    "Data Science",
+                    "Backend",
+                    "Backend",
+                    "Backend",
+                    "DevOps",
+                    "DevOps",
+                    "DevOps",
+                ],
+                "remote_work": [
+                    "Full Remote",
+                    "Hybride",
+                    "Présentiel",
+                    "Full Remote",
+                    "Hybride",
+                    "Présentiel",
+                    "Full Remote",
+                    "Full Remote",
+                    "Hybride",
+                    "Présentiel",
+                ],
+                "experience_required": [
+                    "3-5 ans",
+                    "Junior",
+                    "5+ ans",
+                    "1-3 ans",
+                    "Junior",
+                    "3-5 ans",
+                    "5+ ans",
+                    "5+ ans",
+                    "3-5 ans",
+                    "1-3 ans",
+                ],
+                "skills": [
+                    "Python, SQL, Machine Learning, AWS",
+                    "Python, Django, PostgreSQL, Docker",
+                    "R, Python, Tableau, Azure",
+                    "Python, Spark, Kafka, GCP",
+                    "Java, Spring, PostgreSQL, AWS",
+                    "Node.js, Express, MongoDB",
+                    "Python, FastAPI, Redis, Azure",
+                    "Docker, Kubernetes, AWS, Terraform",
+                    "Jenkins, GitLab, Azure, Ansible",
+                    "Prometheus, Grafana, GCP, Helm",
+                ],
+            }
+        )
+
+    def test_get_remote_work_proportions_by_category(self, categorical_analysis_data):
+        """Test remote work proportions by job category."""
+        analyzer = DataframeAnalyzer(categorical_analysis_data)
+
+        result = analyzer.get_remote_work_proportions_by_category()
+
+        # Should return DataFrame with job categories as index
+        assert isinstance(result, pd.DataFrame)
+        assert "Data Science" in result.index
+        assert "Backend" in result.index
+        assert "DevOps" in result.index
+
+        # Should have remote work type columns
+        expected_columns = {"Full Remote", "Hybride", "Présentiel"}
+        assert expected_columns.issubset(set(result.columns))
+
+        # Proportions should sum to 1.0 for each category (allowing for floating point precision)
+        for category in result.index:
+            row_sum = result.loc[category].sum()
+            assert abs(row_sum - 1.0) < 0.01
+
+        # All values should be between 0 and 1
+        assert (result >= 0).all().all()
+        assert (result <= 1).all().all()
+
+        # Data Science category: 2/4 Full Remote (0.5), 1/4 Hybride (0.25), 1/4 Présentiel (0.25)
+        ds_props = result.loc["Data Science"]
+        assert abs(ds_props["Full Remote"] - 0.5) < 0.01
+        assert abs(ds_props["Hybride"] - 0.25) < 0.01
+        assert abs(ds_props["Présentiel"] - 0.25) < 0.01
+
+    def test_get_experience_proportions_by_category(self, categorical_analysis_data):
+        """Test experience proportions by job category."""
+        analyzer = DataframeAnalyzer(categorical_analysis_data)
+
+        result = analyzer.get_experience_proportions_by_category()
+
+        # Should return DataFrame with job categories as index
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) > 0
+
+        # Should have experience level columns
+        expected_columns = {"Junior", "1-3 ans", "3-5 ans", "5+ ans"}
+        assert expected_columns.issubset(set(result.columns))
+
+        # Proportions should sum to 1.0 for each category
+        for category in result.index:
+            row_sum = result.loc[category].sum()
+            assert abs(row_sum - 1.0) < 0.01
+
+        # All values should be between 0 and 1
+        assert (result >= 0).all().all()
+        assert (result <= 1).all().all()
+
+    def test_get_skills_frequency_by_category(self, categorical_analysis_data):
+        """Test skills frequency analysis by job category."""
+        analyzer = DataframeAnalyzer(categorical_analysis_data)
+
+        result = analyzer.get_skills_frequency_by_category()
+
+        # Should return DataFrame with job categories and skills
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) > 0
+
+        # Should have required columns
+        expected_columns = {"job_category", "skill", "frequency", "proportion"}
+        assert expected_columns.issubset(set(result.columns))
+
+        # Frequency should be integer counts
+        assert result["frequency"].dtype.kind in "iu"
+        assert (result["frequency"] > 0).all()
+
+        # Proportions should be between 0 and 1
+        assert (result["proportion"] > 0).all()
+        assert (result["proportion"] <= 1).all()
+
+        # Check that Python appears in Data Science category
+        ds_python = result[
+            (result["job_category"] == "Data Science") & (result["skill"] == "Python")
+        ]
+        assert len(ds_python) > 0
+        assert ds_python["frequency"].iloc[0] == 4  # Python appears in all 4 Data Science jobs
+
+    def test_get_cloud_provider_frequency_by_category(self, categorical_analysis_data):
+        """Test cloud provider frequency analysis by job category."""
+        analyzer = DataframeAnalyzer(categorical_analysis_data)
+
+        result = analyzer.get_cloud_provider_frequency_by_category()
+
+        # Should return DataFrame with job categories and cloud providers
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) > 0
+
+        # Should have required columns
+        expected_columns = {"job_category", "cloud_provider", "frequency", "proportion"}
+        assert expected_columns.issubset(set(result.columns))
+
+        # Should contain the major cloud providers
+        cloud_providers = set(result["cloud_provider"].unique())
+        expected_providers = {"AWS", "Azure", "GCP"}
+        assert expected_providers.issubset(cloud_providers)
+
+        # Frequency should be integer counts
+        assert result["frequency"].dtype.kind in "iu"
+        assert (result["frequency"] > 0).all()
+
+        # Proportions should be between 0 and 1
+        assert (result["proportion"] > 0).all()
+        assert (result["proportion"] <= 1).all()
+
+        # Check specific data: AWS appears twice in Data Science (out of 4 jobs)
+        ds_aws = result[
+            (result["job_category"] == "Data Science") & (result["cloud_provider"] == "AWS")
+        ]
+        assert len(ds_aws) > 0
+        assert ds_aws["frequency"].iloc[0] == 1  # AWS appears 1 time in 4 Data Science jobs
+
+    def test_empty_dataframe_categorical_analysis(self):
+        """Test categorical analysis methods with empty DataFrame."""
+        empty_df = pd.DataFrame()
+        analyzer = DataframeAnalyzer(empty_df)
+
+        # All methods should handle empty DataFrames gracefully
+        remote_result = analyzer.get_remote_work_proportions_by_category()
+        exp_result = analyzer.get_experience_proportions_by_category()
+        skills_result = analyzer.get_skills_frequency_by_category()
+        cloud_result = analyzer.get_cloud_provider_frequency_by_category()
+
+        for result in [remote_result, exp_result, skills_result, cloud_result]:
+            assert isinstance(result, pd.DataFrame)
+            assert len(result) == 0
+
+    def test_missing_columns_categorical_analysis(self):
+        """Test categorical analysis methods with missing columns."""
+        incomplete_df = pd.DataFrame(
+            {"job_category": ["Data Science", "Backend"], "other_column": [1, 2]}
+        )
+        analyzer = DataframeAnalyzer(incomplete_df)
+
+        # Should handle gracefully when required columns are missing
+        remote_result = analyzer.get_remote_work_proportions_by_category()
+        exp_result = analyzer.get_experience_proportions_by_category()
+        skills_result = analyzer.get_skills_frequency_by_category()
+        cloud_result = analyzer.get_cloud_provider_frequency_by_category()
+
+        for result in [remote_result, exp_result, skills_result, cloud_result]:
+            assert isinstance(result, pd.DataFrame)
+
+    @pytest.mark.parametrize(
+        "category,expected_present",
+        [
+            ("Data Science", True),
+            ("Backend", True),
+            ("DevOps", True),
+            ("NonExistent", False),
+        ],
+    )
+    def test_categorical_analysis_category_presence(
+        self, categorical_analysis_data, category, expected_present
+    ):
+        """Test that expected categories are present in categorical analysis results."""
+        analyzer = DataframeAnalyzer(categorical_analysis_data)
+
+        remote_result = analyzer.get_remote_work_proportions_by_category()
+        exp_result = analyzer.get_experience_proportions_by_category()
+
+        if expected_present:
+            assert category in remote_result.index
+            assert category in exp_result.index
+        else:
+            assert category not in remote_result.index
+            assert category not in exp_result.index
