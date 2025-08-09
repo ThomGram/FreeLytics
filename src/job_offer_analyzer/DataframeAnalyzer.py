@@ -226,11 +226,62 @@ class DataframeAnalyzer:
         Returns:
             DataFrame with columns: job_category, cloud_provider, frequency, proportion
         """
-        cloud_providers = ["AWS", "Azure", "GCP"]
-        result = self._get_frequency_analysis(
-            "skills", split_values=True, filter_values=cloud_providers
+        if (
+            self.df.empty
+            or "job_category" not in self.df.columns
+            or "skills" not in self.df.columns
+        ):
+            return pd.DataFrame(
+                columns=["job_category", "cloud_provider", "frequency", "proportion"]
+            )
+
+        results = []
+
+        for category in self.df["job_category"].unique():
+            if pd.isna(category):
+                continue
+
+            category_data = self.df[self.df["job_category"] == category]
+            total_jobs = len(category_data)
+
+            # Count occurrences of each cloud provider using string contains
+            cloud_counts = {"AWS": 0, "Azure": 0, "GCP": 0}
+
+            for _, row in category_data.iterrows():
+                cell_value = row["skills"]
+                if pd.isna(cell_value) or not cell_value:
+                    continue
+
+                # Split by comma and check each skill
+                skills = [skill.strip() for skill in str(cell_value).split(",") if skill.strip()]
+
+                for skill in skills:
+                    skill_lower = skill.lower()
+                    if "aws" in skill_lower:
+                        cloud_counts["AWS"] += 1
+                    elif "azure" in skill_lower:
+                        cloud_counts["Azure"] += 1
+                    elif "gcp" in skill_lower or "google cloud" in skill_lower:
+                        cloud_counts["GCP"] += 1
+
+            # Create result rows
+            for cloud_provider, count in cloud_counts.items():
+                if count > 0:  # Only include providers that have mentions
+                    proportion = count / total_jobs
+                    results.append(
+                        {
+                            "job_category": category,
+                            "cloud_provider": cloud_provider,
+                            "frequency": count,
+                            "proportion": round(proportion, 4),
+                        }
+                    )
+
+        if not results:
+            return pd.DataFrame(
+                columns=["job_category", "cloud_provider", "frequency", "proportion"]
+            )
+
+        return pd.DataFrame(results).sort_values(
+            ["job_category", "frequency"], ascending=[True, False]
         )
-        # Rename column to match expected test format
-        if "skills" in result.columns:
-            result = result.rename(columns={"skills": "cloud_provider"})
-        return result

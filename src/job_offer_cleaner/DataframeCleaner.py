@@ -116,20 +116,24 @@ class DataframeCleaner:
             raise ValueError(error_msg) from e
 
     @staticmethod
-    def revenue_string_to_min_max(revenue: str) -> Dict[str, str]:
+    def revenue_string_to_min_max(revenue: Union[str, float, Any]) -> Dict[str, str]:
         """
         Convert revenue string to min/max values.
 
         Args:
-            revenue: String like "45k €⁄an", "380-580 €⁄j", "49k-60k €⁄an"
+            revenue: String like "45k €⁄an", "380-580 €⁄j", "49k-60k €⁄an", or NaN/None
 
         Returns:
             Dict with 'min' and 'max' keys containing string values
         """
-        if not revenue or revenue.strip() == "":
+        if pd.isna(revenue) or not revenue or (isinstance(revenue, str) and revenue.strip() == ""):
             return {"min": "", "max": ""}
 
-        revenue = revenue.strip()
+        revenue = str(revenue).strip()
+
+        # Handle the specific case of space in numbers like "45 003-55k" -> "45-55k"
+        # This handles cases where there's a space in the first number of a range
+        revenue = re.sub(r"(\d+)\s+(\d+)(-\d+k)", r"\1\3", revenue, flags=re.IGNORECASE)
 
         # Remove currency symbols and units
         clean_revenue = re.sub(r"[€⁄anjk\s]", "", revenue)
@@ -218,10 +222,14 @@ class DataframeCleaner:
         def parse_publication_date(
             date_str,
         ) -> Tuple[Union[pd.Timestamp, Any], Union[pd.Timestamp, Any]]:
-            if not date_str or date_str.strip() == "":
+            if (
+                pd.isna(date_str)
+                or not date_str
+                or (isinstance(date_str, str) and date_str.strip() == "")
+            ):
                 return pd.NaT, pd.NaT
 
-            date_str = date_str.strip()
+            date_str = str(date_str).strip()
 
             # Check for update date pattern
             if " - Mise à jour le " in date_str:
@@ -279,10 +287,14 @@ class DataframeCleaner:
         logger.info("Cleaning start dates")
 
         def parse_start_date(date_str) -> Tuple[Union[pd.Timestamp, Any], Union[bool, Any]]:
-            if not date_str or date_str.strip() == "":
+            if (
+                pd.isna(date_str)
+                or not date_str
+                or (isinstance(date_str, str) and date_str.strip() == "")
+            ):
                 return pd.NaT, pd.NA
 
-            date_str = date_str.strip()
+            date_str = str(date_str).strip()
 
             # Check for ASAP indicators
             asap_indicators = [
@@ -339,10 +351,14 @@ class DataframeCleaner:
         logger.info("Standardizing duration to days")
 
         def parse_duration(duration_str) -> Union[float, Any]:
-            if not duration_str or duration_str.strip() == "":
+            if (
+                pd.isna(duration_str)
+                or not duration_str
+                or (isinstance(duration_str, str) and duration_str.strip() == "")
+            ):
                 return pd.NA
 
-            duration_str = duration_str.strip().lower()
+            duration_str = str(duration_str).strip().lower()
 
             # Extract number and unit
             match = re.match(r"(\d+(?:\.\d+)?)\s*(\w+)", duration_str)
@@ -393,10 +409,14 @@ class DataframeCleaner:
         logger.info("Parsing company descriptions")
 
         def parse_description(desc_str) -> Tuple[Union[str, Any], Union[str, Any], Union[str, Any]]:
-            if not desc_str or desc_str.strip() == "":
+            if (
+                pd.isna(desc_str)
+                or not desc_str
+                or (isinstance(desc_str, str) and desc_str.strip() == "")
+            ):
                 return pd.NA, pd.NA, pd.NA
 
-            desc_str = desc_str.strip()
+            desc_str = str(desc_str).strip()
 
             # Split by commas and clean whitespace
             parts = [part.strip() for part in desc_str.split(",")]
@@ -472,7 +492,12 @@ class DataframeCleaner:
             # Find all unique contract types in the dataset
             all_contract_types = set()
             for contract_str in result_df["contract_types"]:
-                if contract_str and contract_str.strip():
+                if (
+                    not pd.isna(contract_str)
+                    and contract_str
+                    and (not isinstance(contract_str, str) or contract_str.strip())
+                ):
+                    contract_str = str(contract_str)
                     # Split by comma and clean whitespace
                     types = [t.strip() for t in contract_str.split(",")]
                     types = [t for t in types if t]  # Remove empty strings
@@ -485,7 +510,12 @@ class DataframeCleaner:
 
             # Fill boolean columns based on contract_types values
             for idx, contract_str in enumerate(result_df["contract_types"]):
-                if contract_str and contract_str.strip():
+                if (
+                    not pd.isna(contract_str)
+                    and contract_str
+                    and (not isinstance(contract_str, str) or contract_str.strip())
+                ):
+                    contract_str = str(contract_str)
                     # Split by comma and clean whitespace
                     types = [t.strip() for t in contract_str.split(",")]
                     types = [t for t in types if t]  # Remove empty strings
