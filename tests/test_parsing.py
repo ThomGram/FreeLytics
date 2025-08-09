@@ -1,7 +1,8 @@
 import unittest
 
 from scrapy.http import HtmlResponse
-from scrapy_freework.spiders.freework_spider import FreeworkSpider
+
+from src.scrapy_freework.scrapy_freework.spiders.freework_spider import FreeworkSpider
 
 
 class TestFreeworkSpiderParsing(unittest.TestCase):

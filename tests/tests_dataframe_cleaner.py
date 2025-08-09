@@ -1,6 +1,6 @@
 import pandas as pd
 
-from JobOfferCleaner.DataframeCleaner import DataframeCleaner
+from src.job_offer_cleaner.DataframeCleaner import DataframeCleaner
 
 
 class TestDataframeCleaner:

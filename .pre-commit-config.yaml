@@ -34,7 +34,7 @@ repos:
     hooks:
       - id: bandit
         args: ["-r"]
-        files: ^scrapy_freework/
+        files: ^src/
         exclude: tests/
 
   # General pre-commit hooks
@@ -51,26 +51,19 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
-  # Scrapy-specific checks
+  # Application-specific checks
   - repo: local
     hooks:
       - id: scrapy-settings-check
         name: Check Scrapy settings
-        entry: python -c "import sys; sys.path.append('scraper/scrapy_freework'); from scrapy_freework import settings; print('Scrapy settings OK')"
+        entry: python -c "import sys; sys.path.append('src/scrapy_freework'); from scrapy_freework import settings; print('Scrapy settings OK')"
         language: system
-        files: scrapy_freework/settings\.py$
+        files: src/scrapy_freework/settings\.py$
         pass_filenames: false
 
-      - id: pytest-scraper
-        name: Run scraper tests
-        entry: uv run pytest scraper/scrapy_freework/tests/ -v --tb=short
+      - id: pytest-all
+        name: Run all tests
+        entry: uv run pytest tests/ -v --tb=short
         language: system
-        files: ^scraper/scrapy_freework/(scrapy_freework|tests)/.*\.py$
-        pass_filenames: false
-
-      - id: pytest-dataframe-cleaner
-        name: Run DataframeCleaner tests
-        entry: uv run pytest JobOfferCleaner/tests/tests_dataframe_cleaner.py -v --tb=short
-        language: system
-        files: ^JobOfferCleaner/(DataframeCleaner\.py|tests/tests_dataframe_cleaner\.py)$
+        files: ^(src|tests)/.*\.py$
         pass_filenames: false

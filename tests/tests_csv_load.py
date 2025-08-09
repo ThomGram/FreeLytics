@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from JobOfferCleaner.CSVLoader import CSVLoader
+from src.job_offer_cleaner.CSVLoader import CSVLoader
 
 
 class TestCSVToPandas:
