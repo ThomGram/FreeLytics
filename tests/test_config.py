@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from scrapy_freework.spiders.freework_spider import FreeworkSpider
+from src.scrapy_freework.scrapy_freework.spiders.freework_spider import FreeworkSpider
 
 # Add the parent directory to the path so we can import the spider
 sys.path.append(str(Path(__file__).parent.parent))
@@ -21,7 +21,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
         """Test URL generation with a valid configuration file."""
         # Mock logger using property patch
         with patch.object(type(self.spider), "logger", new_callable=MagicMock):
-            with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
+            with patch(
+                "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
+            ) as mock_path:
                 mock_path.return_value.exists.return_value = True
 
                 # Mock the config file path to use our test fixture
@@ -44,7 +46,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
     def test_generate_start_urls_missing_config_file(self):
         """Test behavior when config file is missing."""
         with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
-            with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
+            with patch(
+                "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
+            ) as mock_path:
                 mock_path.return_value.exists.return_value = False
 
                 urls = self.spider.generate_start_urls()
@@ -57,7 +61,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
     def test_generate_start_urls_invalid_config_section(self):
         """Test behavior when config file is missing required section."""
         with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
-            with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
+            with patch(
+                "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
+            ) as mock_path:
                 mock_path.return_value.exists.return_value = True
 
                 with patch("configparser.ConfigParser.has_section") as mock_has_section:
@@ -73,7 +79,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
     def test_generate_start_urls_missing_required_keys(self):
         """Test behavior when config file is missing required keys."""
         with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
-            with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
+            with patch(
+                "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
+            ) as mock_path:
                 mock_path.return_value.exists.return_value = True
 
                 with patch("configparser.ConfigParser.has_section") as mock_has_section:
@@ -92,7 +100,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
     def test_generate_start_urls_empty_base_url(self):
         """Test behavior when base_url is empty."""
         with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
-            with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
+            with patch(
+                "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
+            ) as mock_path:
                 mock_path.return_value.exists.return_value = True
 
                 with self._mock_valid_config_structure():
@@ -112,7 +122,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
     def test_generate_start_urls_invalid_base_url_scheme(self):
         """Test behavior when base_url is missing scheme."""
         with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
-            with patch("scrapy_freework.spiders.freework_spider.Path") as mock_path:
+            with patch(
+                "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
+            ) as mock_path:
                 mock_path.return_value.exists.return_value = True
 
                 with self._mock_valid_config_structure():
