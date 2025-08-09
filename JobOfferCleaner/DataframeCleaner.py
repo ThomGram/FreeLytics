@@ -151,3 +151,202 @@ class DataframeCleaner:
             error_msg = f"Unexpected error splitting revenue: {str(e)}"
             logger.error(error_msg)
             raise ValueError(error_msg) from e
+
+    @staticmethod
+    def publication_date_cleaning(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Clean publication_date column by extracting dates and update dates.
+
+        Handles formats like:
+        - "Publiée le 06/08/2025" → publication_date: 2025-08-06, update_date: NaT
+        - "Publiée le 21/07/2025 - Mise à jour le 23/07/2025" → publication_date: 2025-07-21, update_date: 2025-07-23
+        - "" → publication_date: NaT, update_date: NaT
+        """
+        logger.info("Cleaning publication dates")
+
+        try:
+            if df is None or len(df) == 0:
+                return df.copy() if df is not None else df
+
+            result_df = df.copy()
+
+            if "publication_date" not in result_df.columns:
+                logger.warning("No publication_date column found")
+                return result_df
+
+            # Initialize update_date column
+            result_df["update_date"] = pd.NaT
+
+            def parse_publication_date(date_str):
+                if not date_str or date_str.strip() == "":
+                    return pd.NaT, pd.NaT
+
+                date_str = date_str.strip()
+
+                # Check for update date pattern
+                if " - Mise à jour le " in date_str:
+                    parts = date_str.split(" - Mise à jour le ")
+                    pub_part = parts[0]
+                    update_part = parts[1]
+
+                    # Extract publication date
+                    pub_match = re.search(r"Publiée le (\d{2}/\d{2}/\d{4})", pub_part)
+                    pub_date = (
+                        pd.to_datetime(pub_match.group(1), format="%d/%m/%Y")
+                        if pub_match
+                        else pd.NaT
+                    )
+
+                    # Extract update date
+                    update_date = pd.to_datetime(update_part, format="%d/%m/%Y")
+
+                    return pub_date, update_date
+                else:
+                    # Single publication date
+                    pub_match = re.search(r"Publiée le (\d{2}/\d{2}/\d{4})", date_str)
+                    pub_date = (
+                        pd.to_datetime(pub_match.group(1), format="%d/%m/%Y")
+                        if pub_match
+                        else pd.NaT
+                    )
+                    return pub_date, pd.NaT
+
+            # Apply parsing to each row
+            parsed_dates = result_df["publication_date"].apply(parse_publication_date)
+            result_df["publication_date"] = [date_tuple[0] for date_tuple in parsed_dates]
+            result_df["update_date"] = [date_tuple[1] for date_tuple in parsed_dates]
+
+            logger.info("Successfully cleaned publication dates")
+            return result_df
+
+        except Exception as e:
+            error_msg = f"Unexpected error cleaning publication dates: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
+
+    @staticmethod
+    def start_date_cleaning(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Clean start_date column by parsing dates and detecting ASAP indicators.
+
+        Handles formats like:
+        - "30/09/2025" → start_date: 2025-09-30, start_date_asap: False
+        - "Dès que possible" → start_date: NaT, start_date_asap: True
+        - "" → start_date: NaT, start_date_asap: NaT
+        """
+        logger.info("Cleaning start dates")
+
+        try:
+            if df is None or len(df) == 0:
+                return df.copy() if df is not None else df
+
+            result_df = df.copy()
+
+            if "start_date" not in result_df.columns:
+                logger.warning("No start_date column found")
+                return result_df
+
+            # Initialize start_date_asap column
+            result_df["start_date_asap"] = pd.NA
+
+            def parse_start_date(date_str):
+                if not date_str or date_str.strip() == "":
+                    return pd.NaT, pd.NA
+
+                date_str = date_str.strip()
+
+                # Check for ASAP indicators
+                asap_indicators = [
+                    "dès que possible",
+                    "asap",
+                    "immédiatement",
+                    "immediately",
+                    "tout de suite",
+                    "maintenant",
+                    "disponible",
+                ]
+
+                if any(indicator in date_str.lower() for indicator in asap_indicators):
+                    return pd.NaT, True
+
+                # Try to parse as date DD/MM/YYYY
+                try:
+                    parsed_date = pd.to_datetime(date_str, format="%d/%m/%Y")
+                    return parsed_date, False
+                except (ValueError, TypeError):
+                    # If parsing fails, treat as unknown
+                    return pd.NaT, pd.NA
+
+            # Apply parsing to each row
+            parsed_dates = result_df["start_date"].apply(parse_start_date)
+            result_df["start_date"] = [date_tuple[0] for date_tuple in parsed_dates]
+            result_df["start_date_asap"] = [date_tuple[1] for date_tuple in parsed_dates]
+
+            logger.info("Successfully cleaned start dates")
+            return result_df
+
+        except Exception as e:
+            error_msg = f"Unexpected error cleaning start dates: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
+
+    @staticmethod
+    def standardize_duration(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Standardize duration column by converting all formats to days.
+
+        Handles formats like:
+        - "145 jours" → 145.0 days
+        - "12 mois" → 365.0 days (12 * 30.42 avg days/month)
+        - "3 ans" → 1095.0 days (3 * 365)
+        - "" → NaN
+        """
+        logger.info("Standardizing duration to days")
+
+        try:
+            if df is None or len(df) == 0:
+                return df.copy() if df is not None else df
+
+            result_df = df.copy()
+
+            if "duration" not in result_df.columns:
+                logger.warning("No duration column found")
+                return result_df
+
+            def parse_duration(duration_str):
+                if not duration_str or duration_str.strip() == "":
+                    return pd.NA
+
+                duration_str = duration_str.strip().lower()
+
+                # Extract number and unit
+                match = re.match(r"(\d+(?:\.\d+)?)\s*(\w+)", duration_str)
+                if not match:
+                    return pd.NA
+
+                value = float(match.group(1))
+                unit = match.group(2)
+
+                # Convert to days
+                if unit in ["jour", "jours", "day", "days", "j"]:
+                    return value
+                elif unit in ["semaine", "semaines", "week", "weeks", "s"]:
+                    return value * 7
+                elif unit in ["mois", "month", "months", "m"]:
+                    return value * 30  # Average days per month
+                elif unit in ["an", "ans", "année", "années", "year", "years", "y"]:
+                    return value * 365
+                else:
+                    # Unknown unit, return NaN
+                    return pd.NA
+
+            # Apply parsing to each row
+            result_df["duration_days"] = result_df["duration"].apply(parse_duration)
+
+            logger.info("Successfully standardized duration to days")
+            return result_df
+
+        except Exception as e:
+            error_msg = f"Unexpected error standardizing duration: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e

@@ -61,9 +61,16 @@ repos:
         files: scrapy_freework/settings\.py$
         pass_filenames: false
 
-      - id: pytest
-        name: Run tests
+      - id: pytest-scraper
+        name: Run scraper tests
         entry: uv run pytest scraper/scrapy_freework/tests/ -v --tb=short
         language: system
         files: ^scraper/scrapy_freework/(scrapy_freework|tests)/.*\.py$
+        pass_filenames: false
+
+      - id: pytest-dataframe-cleaner
+        name: Run DataframeCleaner tests
+        entry: uv run pytest JobOfferCleaner/tests/tests_dataframe_cleaner.py -v --tb=short
+        language: system
+        files: ^JobOfferCleaner/(DataframeCleaner\.py|tests/tests_dataframe_cleaner\.py)$
         pass_filenames: false
