@@ -32,6 +32,57 @@ def scrape_daily_data(**context):
     return output_file
 
 
+def insert_into_datalake(**context):
+    """Task to insert daily jobs scraping to datalake"""
+    from src.datalake.create_insert import insert_into_ducklake
+    import os
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
+    scraped_file = context["task_instance"].xcom_pull(task_ids="scrape_daily_data")
+
+    DATALAKE_PATH = os.getenv("DATALAKE_PATH")
+    CSV_TEST_FILE = os.getenv("CSV_TEST_FILE")
+    TABLE_NAME = os.getenv("DUCKLAKE_TABLE_NAME")
+    print(f"Using datalake path: {DATALAKE_PATH}")
+    print(f"Using CSV file: {CSV_TEST_FILE}")
+    insert_into_ducklake(
+        ducklake_path=DATALAKE_PATH, csv_file=scraped_file, table_name=TABLE_NAME
+    )
+
+
+def cleanup_old_files(**context):
+    """Task to clean up old scraped files (keep last 7 days)"""
+    from datetime import timedelta
+    from pathlib import Path
+
+    execution_date = context["execution_date"]
+    cutoff_date = execution_date - timedelta(days=7)
+
+    data_dir = Path("/opt/airflow/data")
+    cleaned_files = []
+
+    # Find old CSV files
+    for csv_file in data_dir.glob("scraped_jobs_*.csv"):
+        try:
+            # Extract date from filename
+            filename = csv_file.name
+            date_part = filename.replace("scraped_jobs_", "").replace(".csv", "")
+            file_date = datetime.strptime(date_part, "%Y-%m-%d")
+
+            if file_date < cutoff_date:
+                print(f"Removing old file: {csv_file}")
+                csv_file.unlink()
+                cleaned_files.append(str(csv_file))
+
+        except (ValueError, Exception) as e:
+            print(f"Could not process file {csv_file}: {e}")
+
+    print(f"Cleaned up {len(cleaned_files)} old files")
+    return cleaned_files
+
+
 default_args = {
     "owner": "freelytics",
     "depends_on_past": False,
@@ -46,7 +97,8 @@ dag = DAG(
     description="Daily FreeLytics scraping pipeline",
     schedule_interval="@daily",
     catchup=False,
-    tags=["daily", "scraping"],
+    tags=["daily", "scraping", "datalake"],
+    max_active_runs=1,
 )
 
 scrape_task = PythonOperator(
@@ -54,3 +106,17 @@ scrape_task = PythonOperator(
     python_callable=scrape_daily_data,
     dag=dag,
 )
+
+datalake_insert_task = PythonOperator(
+    task_id="insert_to_datalake",
+    python_callable=insert_into_datalake,
+    dag=dag,
+)
+
+cleanup_task = PythonOperator(
+    task_id="cleanup_old_files",
+    python_callable=cleanup_old_files,
+    dag=dag,
+)
+
+scrape_task >> datalake_insert_task >> cleanup_task

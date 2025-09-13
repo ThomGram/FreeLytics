@@ -13,6 +13,7 @@ dependencies = [
     "matplotlib>=3.10.5",
     "seaborn>=0.13.2",
     "apache-airflow[postgres,oidc]>=2.10.0",
+    "duckdb>=1.3.2",
 ]
 
 [project.optional-dependencies]

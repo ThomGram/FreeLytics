@@ -6,7 +6,6 @@ from loguru import logger
 
 
 class DataframeCleaner:
-
     @staticmethod
     def _validate_dataframe(df: pd.DataFrame, operation_name: str) -> pd.DataFrame:
         """Common validation for DataFrame inputs."""
@@ -99,14 +98,18 @@ class DataframeCleaner:
             if ignore_columns:
                 subset_cols = df.columns.difference(ignore_columns).tolist()
                 if not subset_cols:  # All columns are ignored
-                    logger.warning("All columns are ignored, returning original DataFrame")
+                    logger.warning(
+                        "All columns are ignored, returning original DataFrame"
+                    )
                     return df.copy()
             else:
                 subset_cols = None  # Check all columns
 
             result_df = df.drop_duplicates(subset=subset_cols, keep="first")
             removed_count = len(df) - len(result_df)
-            logger.info(f"Removed {removed_count} duplicate rows, {len(result_df)} rows remaining")
+            logger.info(
+                f"Removed {removed_count} duplicate rows, {len(result_df)} rows remaining"
+            )
 
             return result_df
 
@@ -126,7 +129,11 @@ class DataframeCleaner:
         Returns:
             Dict with 'min' and 'max' keys containing string values
         """
-        if pd.isna(revenue) or not revenue or (isinstance(revenue, str) and revenue.strip() == ""):
+        if (
+            pd.isna(revenue)
+            or not revenue
+            or (isinstance(revenue, str) and revenue.strip() == "")
+        ):
             return {"min": "", "max": ""}
 
         revenue = str(revenue).strip()
@@ -187,7 +194,9 @@ class DataframeCleaner:
 
             # Process salary column if it exists
             if "salary" in result_df.columns:
-                salary_data = result_df["salary"].apply(DataframeCleaner.revenue_string_to_min_max)
+                salary_data = result_df["salary"].apply(
+                    DataframeCleaner.revenue_string_to_min_max
+                )
                 result_df["salary_min"] = salary_data.apply(lambda x: x["min"])
                 result_df["salary_max"] = salary_data.apply(lambda x: x["max"])
 
@@ -240,7 +249,9 @@ class DataframeCleaner:
                 # Extract publication date
                 pub_match = re.search(r"Publiée le (\d{2}/\d{2}/\d{4})", pub_part)
                 pub_date = (
-                    pd.to_datetime(pub_match.group(1), format="%d/%m/%Y") if pub_match else pd.NaT
+                    pd.to_datetime(pub_match.group(1), format="%d/%m/%Y")
+                    if pub_match
+                    else pd.NaT
                 )
 
                 # Extract update date
@@ -251,12 +262,16 @@ class DataframeCleaner:
                 # Single publication date
                 pub_match = re.search(r"Publiée le (\d{2}/\d{2}/\d{4})", date_str)
                 pub_date = (
-                    pd.to_datetime(pub_match.group(1), format="%d/%m/%Y") if pub_match else pd.NaT
+                    pd.to_datetime(pub_match.group(1), format="%d/%m/%Y")
+                    if pub_match
+                    else pd.NaT
                 )
                 return pub_date, pd.NaT
 
         # Initialize update_date column first
-        result_df = DataframeCleaner._validate_dataframe(df, "publication date cleaning")
+        result_df = DataframeCleaner._validate_dataframe(
+            df, "publication date cleaning"
+        )
         if len(result_df) == 0:
             return result_df
 
@@ -286,7 +301,9 @@ class DataframeCleaner:
         """
         logger.info("Cleaning start dates")
 
-        def parse_start_date(date_str) -> Tuple[Union[pd.Timestamp, Any], Union[bool, Any]]:
+        def parse_start_date(
+            date_str,
+        ) -> Tuple[Union[pd.Timestamp, Any], Union[bool, Any]]:
             if (
                 pd.isna(date_str)
                 or not date_str
@@ -408,7 +425,9 @@ class DataframeCleaner:
         """
         logger.info("Parsing company descriptions")
 
-        def parse_description(desc_str) -> Tuple[Union[str, Any], Union[str, Any], Union[str, Any]]:
+        def parse_description(
+            desc_str,
+        ) -> Tuple[Union[str, Any], Union[str, Any], Union[str, Any]]:
             if (
                 pd.isna(desc_str)
                 or not desc_str
@@ -448,7 +467,9 @@ class DataframeCleaner:
             return location, size, company_type
 
         # Initialize new columns first
-        result_df = DataframeCleaner._validate_dataframe(df, "company description parsing")
+        result_df = DataframeCleaner._validate_dataframe(
+            df, "company description parsing"
+        )
         if len(result_df) == 0:
             return result_df
 
@@ -465,7 +486,11 @@ class DataframeCleaner:
             "company_description",
             parse_description,
             "company description parsing",
-            {"company_location": "location", "company_size": "size", "company_type": "type"},
+            {
+                "company_location": "location",
+                "company_size": "size",
+                "company_type": "type",
+            },
         )
 
     @staticmethod
@@ -480,7 +505,9 @@ class DataframeCleaner:
         """
         logger.info("Converting contract types to one-hot encoding")
 
-        result_df = DataframeCleaner._validate_dataframe(df, "contract types one-hot encoding")
+        result_df = DataframeCleaner._validate_dataframe(
+            df, "contract types one-hot encoding"
+        )
         if len(result_df) == 0:
             return result_df
 
@@ -532,6 +559,8 @@ class DataframeCleaner:
             return result_df
 
         except Exception as e:
-            error_msg = f"Unexpected error creating contract types one-hot encoding: {str(e)}"
+            error_msg = (
+                f"Unexpected error creating contract types one-hot encoding: {str(e)}"
+            )
             logger.error(error_msg)
             raise ValueError(error_msg) from e

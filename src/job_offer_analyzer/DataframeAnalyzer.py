@@ -35,10 +35,16 @@ class DataframeAnalyzer:
                 continue
 
             # Add column value if present and not empty
-            if column_name in row and row[column_name] and str(row[column_name]).strip():
+            if (
+                column_name in row
+                and row[column_name]
+                and str(row[column_name]).strip()
+            ):
                 try:
                     value = float(row[column_name])
-                    data.append({"job_category": category, column_name: value, "job_id": idx})
+                    data.append(
+                        {"job_category": category, column_name: value, "job_id": idx}
+                    )
                 except (ValueError, TypeError):
                     pass
 
@@ -84,7 +90,9 @@ class DataframeAnalyzer:
         contingency_table = pd.crosstab(self.df["job_category"], self.df[column_name])
 
         # Convert counts to proportions (normalize by rows)
-        proportions = contingency_table.div(contingency_table.sum(axis=1), axis=0).fillna(0)
+        proportions = contingency_table.div(
+            contingency_table.sum(axis=1), axis=0
+        ).fillna(0)
 
         return proportions.round(4)
 
@@ -109,7 +117,9 @@ class DataframeAnalyzer:
             or "job_category" not in self.df.columns
             or column_name not in self.df.columns
         ):
-            return pd.DataFrame(columns=["job_category", column_name, "frequency", "proportion"])
+            return pd.DataFrame(
+                columns=["job_category", column_name, "frequency", "proportion"]
+            )
 
         results = []
 
@@ -130,7 +140,9 @@ class DataframeAnalyzer:
 
                 if split_values:
                     # Split by comma and clean whitespace
-                    values = [v.strip() for v in str(cell_value).split(",") if v.strip()]
+                    values = [
+                        v.strip() for v in str(cell_value).split(",") if v.strip()
+                    ]
                 else:
                     values = [str(cell_value).strip()]
 
@@ -152,7 +164,9 @@ class DataframeAnalyzer:
                 )
 
         if not results:
-            return pd.DataFrame(columns=["job_category", column_name, "frequency", "proportion"])
+            return pd.DataFrame(
+                columns=["job_category", column_name, "frequency", "proportion"]
+            )
 
         return pd.DataFrame(results).sort_values(
             ["job_category", "frequency"], ascending=[True, False]
@@ -253,7 +267,11 @@ class DataframeAnalyzer:
                     continue
 
                 # Split by comma and check each skill
-                skills = [skill.strip() for skill in str(cell_value).split(",") if skill.strip()]
+                skills = [
+                    skill.strip()
+                    for skill in str(cell_value).split(",")
+                    if skill.strip()
+                ]
 
                 for skill in skills:
                     skill_lower = skill.lower()

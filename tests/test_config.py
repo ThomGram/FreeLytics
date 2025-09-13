@@ -45,7 +45,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
     def test_generate_start_urls_missing_config_file(self):
         """Test behavior when config file is missing."""
-        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
+        with patch.object(
+            type(self.spider), "logger", new_callable=MagicMock
+        ) as mock_logger:
             with patch(
                 "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
             ) as mock_path:
@@ -60,7 +62,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
     def test_generate_start_urls_invalid_config_section(self):
         """Test behavior when config file is missing required section."""
-        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
+        with patch.object(
+            type(self.spider), "logger", new_callable=MagicMock
+        ) as mock_logger:
             with patch(
                 "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
             ) as mock_path:
@@ -78,7 +82,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
     def test_generate_start_urls_missing_required_keys(self):
         """Test behavior when config file is missing required keys."""
-        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
+        with patch.object(
+            type(self.spider), "logger", new_callable=MagicMock
+        ) as mock_logger:
             with patch(
                 "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
             ) as mock_path:
@@ -87,7 +93,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
                 with patch("configparser.ConfigParser.has_section") as mock_has_section:
                     mock_has_section.return_value = True
 
-                    with patch("configparser.ConfigParser.has_option") as mock_has_option:
+                    with patch(
+                        "configparser.ConfigParser.has_option"
+                    ) as mock_has_option:
                         mock_has_option.return_value = False
 
                         urls = self.spider.generate_start_urls()
@@ -99,7 +107,9 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
 
     def test_generate_start_urls_empty_base_url(self):
         """Test behavior when base_url is empty."""
-        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
+        with patch.object(
+            type(self.spider), "logger", new_callable=MagicMock
+        ) as mock_logger:
             with patch(
                 "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
             ) as mock_path:
@@ -117,11 +127,15 @@ class TestFreeworkSpiderConfig(unittest.TestCase):
                         urls = self.spider.generate_start_urls()
 
                         self.assertEqual(urls, [])
-                        mock_logger.error.assert_called_with("base_url is empty in config file")
+                        mock_logger.error.assert_called_with(
+                            "base_url is empty in config file"
+                        )
 
     def test_generate_start_urls_invalid_base_url_scheme(self):
         """Test behavior when base_url is missing scheme."""
-        with patch.object(type(self.spider), "logger", new_callable=MagicMock) as mock_logger:
+        with patch.object(
+            type(self.spider), "logger", new_callable=MagicMock
+        ) as mock_logger:
             with patch(
                 "src.scrapy_freework.scrapy_freework.spiders.freework_spider.Path"
             ) as mock_path:

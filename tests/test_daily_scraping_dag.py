@@ -7,7 +7,6 @@ import pytest
 
 
 class TestDailyScrapingDag:
-
     def setup_method(self):
         # Mock Airflow environment
         os.environ["AIRFLOW__CORE__EXECUTOR"] = "SequentialExecutor"

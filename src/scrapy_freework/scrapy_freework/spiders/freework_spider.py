@@ -172,7 +172,9 @@ class FreeworkSpider(scrapy.Spider):
         # Pagination - continuer vers les pages suivantes
         total_pages = self.get_total_pages_simple(response)
         current_page = (
-            int(re.search(r"page=(\d+)", response.url).group(1)) if "page=" in response.url else 1
+            int(re.search(r"page=(\d+)", response.url).group(1))
+            if "page=" in response.url
+            else 1
         )
 
         self.logger.info(f"Page {current_page}/{total_pages}")
@@ -324,7 +326,9 @@ class FreeworkSpider(scrapy.Spider):
             )
 
             # Technologies/compétences
-            skills = self._process_skills(response.css("a.tag div.truncate::text").getall())
+            skills = self._process_skills(
+                response.css("a.tag div.truncate::text").getall()
+            )
 
             yield {
                 "job_title": job_title.strip() if job_title else "",
@@ -334,7 +338,9 @@ class FreeworkSpider(scrapy.Spider):
                 "contract_types": contract_types,
                 "description": description,
                 "company_description": company_description,
-                "publication_date": publication_date.strip() if publication_date else "",
+                "publication_date": publication_date.strip()
+                if publication_date
+                else "",
                 "skills": skills,
                 "start_date": sidebar_data.get("start_date", ""),
                 "duration": sidebar_data.get("duration", ""),
