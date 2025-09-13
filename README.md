@@ -7,6 +7,10 @@ Freelytics vise à fournir les tendances par rôle data en terme de tjm, compét
 ## A propos
 
 Je suis Thomas, j'ai plus de 6 ans d'expérience dans la data.
+J'ai collaboré avec des institutions renommées telles que le CERN, l'Université de Victoria et Sorbonne Université.
+Passionné de deep learning et de data, je suis Data Scientist bénévole pour Pyronear.
+Pyronear automatise la détection des feux de forêts grâce au Computer Vision.
+Je travaille avec les startups/TPE/PME sur des sujets data et machine learning.
 
 ## Techno
 
@@ -15,7 +19,8 @@ Je suis Thomas, j'ai plus de 6 ans d'expérience dans la data.
  - Duckdb et ducklake pour le data lake
  - docker pour la containerisation
  - pytest pour les tests unitaires et d'integration
- - ruff
+ - ruff pendant le pre commit et la ci
+ - ci avec github
 
 ### Scraping
 
