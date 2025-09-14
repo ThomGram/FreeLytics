@@ -14,7 +14,9 @@ class TestFreeworkSpiderParsing(unittest.TestCase):
 
     def _create_response(self, html_content, url="http://example.com"):
         """Helper to create a Scrapy response from HTML string."""
-        return HtmlResponse(url=url, body=html_content.encode("utf-8"), encoding="utf-8")
+        return HtmlResponse(
+            url=url, body=html_content.encode("utf-8"), encoding="utf-8"
+        )
 
     def test_get_icon_field_mapping(self):
         """Test that icon field mapping contains expected mappings."""
@@ -78,7 +80,8 @@ class TestFreeworkSpiderParsing(unittest.TestCase):
 
         request = requests[0]
         self.assertEqual(
-            request.url, "http://example.com/fr/tech-it/data-scientist/job-mission/test-job-1"
+            request.url,
+            "http://example.com/fr/tech-it/data-scientist/job-mission/test-job-1",
         )
         self.assertEqual(request.callback, self.spider.parse_job_detail)
 

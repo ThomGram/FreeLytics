@@ -6,7 +6,6 @@ from loguru import logger
 
 
 class CSVLoader:
-
     @staticmethod
     def csv_to_pandas(
         file_path: str, separator: Optional[str] = ",", encoding: str = "utf-8"
@@ -39,7 +38,9 @@ class CSVLoader:
                 raise ValueError(error_msg)
 
             # Read CSV file
-            logger.debug(f"Reading CSV with pandas, separator='{separator}', encoding='{encoding}'")
+            logger.debug(
+                f"Reading CSV with pandas, separator='{separator}', encoding='{encoding}'"
+            )
             df = pd.read_csv(file_path, sep=separator, encoding=encoding)
 
             # Validate DataFrame
