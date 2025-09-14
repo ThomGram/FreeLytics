@@ -1,4 +1,4 @@
-FROM apache/airflow:2.10.0-python3.12
+FROM apache/airflow:3.0.6
 
 USER root
 
@@ -14,10 +14,9 @@ ENV PATH="/root/.cargo/bin:$PATH"
 USER airflow
 
 COPY pyproject.toml README.md /opt/airflow/
-
-RUN uv sync
-
 COPY src/ /opt/airflow/src/
+
+RUN uv sync && uv pip install -e .
 COPY data/ /opt/airflow/data/
 COPY airflow/dags/ /opt/airflow/dags/
 COPY FreeLytics.cfg /opt/airflow/

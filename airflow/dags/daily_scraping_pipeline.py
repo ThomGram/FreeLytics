@@ -1,32 +1,32 @@
-import sys
 from datetime import datetime
 
 from airflow.operators.python import PythonOperator  # type: ignore
 
 from airflow import DAG  # type: ignore
 
-sys.path.insert(0, "/opt/airflow/src")
-
 
 def scrape_daily_data(**context):
     """Task to scrape job data with date-based filename"""
     import subprocess  # nosec
 
-    execution_date = context["execution_date"]
+    execution_date = context["logical_date"]
     date_str = execution_date.strftime("%Y-%m-%d")
     output_file = f"/opt/airflow/data/scraped_jobs_{date_str}.csv"
+
+    print(f"Starting scraping for {date_str}")
+    print(f"Output will be saved to: {output_file}")
 
     result = subprocess.run(  # nosec
         ["/opt/airflow/.venv/bin/scrapy", "crawl", "freework", "-o", output_file],
         cwd="/opt/airflow/src/scrapy_freework",
-        capture_output=True,
         text=True,
     )
 
     if result.returncode != 0:
-        raise Exception(f"Scraping failed: {result.stderr}")
+        print(f"Scraping failed with return code: {result.returncode}")
+        raise Exception(f"Scraping failed with return code: {result.returncode}")
 
-    print(f"Scraping completed for {date_str}: {result.stdout}")
+    print(f"Scraping completed successfully for {date_str}")
     print(f"Output file: {output_file}")
 
     return output_file
@@ -34,19 +34,18 @@ def scrape_daily_data(**context):
 
 def insert_into_datalake(**context):
     """Task to insert daily jobs scraping to datalake"""
-    from src.datalake.create_insert import insert_into_ducklake
     import os
     from dotenv import load_dotenv
+    from src.datalake.create_insert import insert_into_ducklake
 
     load_dotenv()
 
     scraped_file = context["task_instance"].xcom_pull(task_ids="scrape_daily_data")
 
     DATALAKE_PATH = os.getenv("DATALAKE_PATH")
-    CSV_TEST_FILE = os.getenv("CSV_TEST_FILE")
     TABLE_NAME = os.getenv("DUCKLAKE_TABLE_NAME")
     print(f"Using datalake path: {DATALAKE_PATH}")
-    print(f"Using CSV file: {CSV_TEST_FILE}")
+    print(f"Using CSV file: {scraped_file}")
     insert_into_ducklake(
         ducklake_path=DATALAKE_PATH, csv_file=scraped_file, table_name=TABLE_NAME
     )
@@ -57,8 +56,8 @@ def cleanup_old_files(**context):
     from datetime import timedelta
     from pathlib import Path
 
-    execution_date = context["execution_date"]
-    cutoff_date = execution_date - timedelta(days=7)
+    execution_date = context["logical_date"]
+    cutoff_date = (execution_date - timedelta(days=7)).replace(tzinfo=None)
 
     data_dir = Path("/opt/airflow/data")
     cleaned_files = []
@@ -66,9 +65,19 @@ def cleanup_old_files(**context):
     # Find old CSV files
     for csv_file in data_dir.glob("scraped_jobs_*.csv"):
         try:
-            # Extract date from filename
+            # Extract date from filename - skip files with invalid names
             filename = csv_file.name
+            if not filename.startswith("scraped_jobs_") or not filename.endswith(
+                ".csv"
+            ):
+                continue
+
             date_part = filename.replace("scraped_jobs_", "").replace(".csv", "")
+            # Skip files with extra text (like "copy")
+            if not date_part.count("-") == 2:
+                print(f"Skipping file with invalid date format: {csv_file}")
+                continue
+
             file_date = datetime.strptime(date_part, "%Y-%m-%d")
 
             if file_date < cutoff_date:
@@ -95,7 +104,7 @@ dag = DAG(
     "daily_scraping_pipeline",
     default_args=default_args,
     description="Daily FreeLytics scraping pipeline",
-    schedule_interval="@daily",
+    schedule="@daily",
     catchup=False,
     tags=["daily", "scraping", "datalake"],
     max_active_runs=1,

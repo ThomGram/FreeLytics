@@ -49,7 +49,7 @@ class TestDailyScrapingDag:
         """Test that output files contain date in their names"""
         test_date = datetime(2024, 1, 15, 10, 0, 0)
 
-        context = {"ds": "2024-01-15", "execution_date": test_date}
+        context = {"ds": "2024-01-15", "logical_date": test_date}
 
         with patch("subprocess.run") as mock_subprocess:
             mock_subprocess.return_value.returncode = 0
@@ -70,7 +70,7 @@ class TestDailyScrapingDag:
             mock_subprocess.return_value.returncode = 1
             mock_subprocess.return_value.stderr = "Connection error"
 
-            context = {"ds": "2024-01-15", "execution_date": datetime(2024, 1, 15)}
+            context = {"ds": "2024-01-15", "logical_date": datetime(2024, 1, 15)}
 
             with pytest.raises(Exception) as exc_info:
                 self.dag_module.scrape_daily_data(**context)
@@ -80,7 +80,7 @@ class TestDailyScrapingDag:
     def test_data_cleaning_with_dated_files(self):
         """Test that scraping function generates expected file paths"""
         test_date = "2024-01-15"
-        context = {"ds": test_date, "execution_date": datetime(2024, 1, 15)}
+        context = {"ds": test_date, "logical_date": datetime(2024, 1, 15)}
 
         with patch("subprocess.run") as mock_subprocess:
             mock_subprocess.return_value.returncode = 0
