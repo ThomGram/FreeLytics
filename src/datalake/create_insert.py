@@ -74,7 +74,6 @@ def insert_into_ducklake(ducklake_path, csv_file, table_name, mode="append"):
         except (duckdb.CatalogException, duckdb.Error):
             template = f"INSERT INTO $table  {DATEQUERY};"
             query = template_to_query_substitution(template, substitution_dict)
-            query = template.substitute(table=(table_name), path=(csv_file))
             print(query)
             duckdb.sql(query)
             print(f"Appended to existing table '{table_name}'")
