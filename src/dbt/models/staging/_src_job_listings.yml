@@ -2,5 +2,11 @@ sources:
   - name: lake_raw
     database: datalake
     schema: main
+    config:
+      freshness:
+        warn_after:
+          count: 24
+          period: hour
+    loaded_at_field: published_at
     tables:
       - name: freelytics_raw
