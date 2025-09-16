@@ -1,0 +1,6 @@
+sources:
+  - name: lake_raw
+    database: datalake
+    schema: main
+    tables:
+      - name: freelytics_raw

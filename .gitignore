@@ -212,3 +212,8 @@ __marimo__/
 
 # Airflow
 airflow/logs
+
+
+# dbt
+dbt/logs
+/home/toto/Documents/Grammaticorp/FreeLytics/src/dbt/.user.yml
