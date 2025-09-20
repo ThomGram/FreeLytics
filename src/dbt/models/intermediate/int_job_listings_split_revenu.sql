@@ -29,7 +29,7 @@ with raw_job_listings as
             {{revenu_to_int("daily_rate_max_str")}} as daily_rate_max
             from split_salary_daily_rate_min_max_str)
 
-select raw_job.*,
+select raw_job.* exclude(salary),
         minmax.salary_min,
         minmax.salary_max,
         minmax.daily_rate_min,
