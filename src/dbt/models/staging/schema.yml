@@ -3,7 +3,7 @@ version: 2
 models:
   - name: stg_job_listings
     columns:
-      - name: listing_id
+      - name: job_url
         tests:
           - unique
           - not_null
@@ -16,35 +16,3 @@ models:
         tests:
           - unique
           - not_null
-      - name: updated_at
-        description: "Timestamp when the job listing was last updated"
-        tests:
-          - not_null
-      - name: created_at
-        description: "Timestamp when the job listing was first created"
-      - name: title
-        description: "Job title"
-      - name: company
-        description: "Company name"
-      - name: location
-        description: "Job location"
-      - name: description
-        description: "Job description"
-      - name: salary
-        description: "Salary information"
-      - name: job_type
-        description: "Type of job (full-time, part-time, contract, etc.)"
-      - name: remote_allowed
-        description: "Whether remote work is allowed"
-      - name: experience_level
-        description: "Required experience level"
-      - name: skills_required
-        description: "Required skills for the position"
-      - name: posted_date
-        description: "Date when the job was posted"
-      - name: application_deadline
-        description: "Application deadline"
-      - name: source_platform
-        description: "Platform where the job was sourced from"
-      - name: raw_data
-        description: "Raw JSON data from the source"
