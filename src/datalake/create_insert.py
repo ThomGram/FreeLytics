@@ -23,7 +23,8 @@ select *,
         case
             when updated_at_str is not null
                 then strptime(right(updated_at_str, 10), '%d/%m/%Y')
-                else strptime(right(published_at_str, 10), '%d/%m/%Y') end as updated_at
+                else strptime(right(published_at_str, 10), '%d/%m/%Y') end as updated_at,
+        current_timestamp as inserted_at
         from split_str;
 
 

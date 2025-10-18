@@ -1,1 +1,1 @@
-select * from {{ ref('stg_raw_job_listings_incr')}} where dbt_valid_to = DATE '9999-12-31'
+select * from {{ ref('job_listings_snapshot') }} where dbt_valid_to = DATE '9999-12-31'

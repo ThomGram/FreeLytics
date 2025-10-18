@@ -7,12 +7,3 @@ models:
         tests:
           - unique
           - not_null
-
-  - name: stg_raw_job_listings_incr
-    description: "Incremental staging model for raw job listings data with deduplication"
-    columns:
-      - name: job_url
-        description: "Unique identifier for the job listing"
-        tests:
-          - unique
-          - not_null

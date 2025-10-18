@@ -1,6 +1,6 @@
 snapshots:
   - name: job_listings_snapshot
-    relation: source('lake_raw', 'freelytics_raw')
+    relation: ref('stg_raw_job_listings_deduped')
     config:
       schema: snapshots
       database: freelytics_warehouse
