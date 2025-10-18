@@ -23,11 +23,15 @@ seeds:
     node_color: '#cd7f32'
 
 models:
-  freelytics:
+  market:
     +materialized: table
-    staging:
-      +materialized: view
-      +docs:
-        node_color: 'silver'
     +docs:
       node_color: 'gold'
+  staging:
+    +materialized: view
+    +docs:
+      node_color: 'bronze'
+  intermediate:
+    +materialized: view
+    +docs:
+      node_color: 'silver'

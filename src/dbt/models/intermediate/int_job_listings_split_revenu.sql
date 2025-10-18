@@ -4,11 +4,11 @@ with raw_job_listings as
     rm_special_characters as
     (select job_url,
             case
-                when salary not null
+                when salary is not null
                   then  trim(split_part(salary, '€', 1))
                 else null end as salary_no_spe_charac,
             case
-                when daily_rate not null
+                when daily_rate is not null
                   then  trim(split_part(daily_rate, '€', 1))
                 else null  end  as daily_rate_no_spe_charac
             from raw_job_listings),
