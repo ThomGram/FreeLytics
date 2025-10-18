@@ -1,7 +1,7 @@
 {{ config(
      materialized='incremental',
      unique_key='job_url',
-     incremental_strategy='merge'
+     incremental_strategy='append'
 ) }}
 
 with base as (
