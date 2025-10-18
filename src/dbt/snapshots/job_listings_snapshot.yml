@@ -1,0 +1,10 @@
+snapshots:
+  - name: job_listings_snapshot
+    relation: ref('stg_raw_job_listings_deduped')
+    config:
+      schema: snapshots
+      database: freelytics_warehouse
+      unique_key: job_url
+      strategy: timestamp
+      updated_at: updated_at
+      dbt_valid_to_current: " CAST('9999-12-31' AS DATE)"

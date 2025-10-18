@@ -3,6 +3,32 @@ import duckdb
 from pathlib import Path
 from dotenv import load_dotenv
 from string import Template
+from src.datalake.utils import template_to_query_substitution
+
+
+DATEQUERY = """
+with split_str as
+    (select *,
+        case
+            when '-' in publication_date
+                then left(publication_date, instr(publication_date, '-')-2)
+                else publication_date end as published_at_str,
+        case
+            when '-' in publication_date
+                then right(publication_date, instr(publication_date, '-'))
+                else null end as updated_at_str
+        from read_csv('$path'))
+select *,
+        strptime(right(published_at_str, 10), '%d/%m/%Y')  as published_at,
+        case
+            when updated_at_str is not null
+                then strptime(right(updated_at_str, 10), '%d/%m/%Y')
+                else strptime(right(published_at_str, 10), '%d/%m/%Y') end as updated_at,
+        current_timestamp as inserted_at
+        from split_str;
+
+
+"""
 
 
 def insert_into_ducklake(ducklake_path, csv_file, table_name, mode="append"):
@@ -22,35 +48,40 @@ def insert_into_ducklake(ducklake_path, csv_file, table_name, mode="append"):
 
     duckdb.sql("INSTALL ducklake;")
     duckdb.sql("LOAD ducklake;")
-    duckdb.sql(f"ATTACH 'ducklake:{ducklake_path}' AS freelytics_ducklake;")
+    query = template_to_query_substitution(
+        f"ATTACH 'ducklake:{ducklake_path}' AS freelytics_ducklake;",
+        {"ducklake_path": ducklake_path},
+    )
+    duckdb.sql(query)
     duckdb.sql("USE freelytics_ducklake;")
 
+    substitution_dict = {"table": table_name, "path": csv_file}
+
     if mode == "create_or_replace":
-        template = Template(
-            "CREATE OR REPLACE TABLE $table AS SELECT * FROM read_csv('$path');"
+        query = template_to_query_substitution(
+            f"CREATE OR REPLACE TABLE $table AS {DATEQUERY};", substitution_dict
         )
-        query = template.substitute(table=(table_name), path=(csv_file))
         duckdb.sql(query)
         print(f"Created/replaced table '{table_name}'")
 
     elif mode == "append":
         try:
-            template = Template(
-                "CREATE TABLE $table AS SELECT * FROM read_csv('$path');"
+            template = Template(f"CREATE TABLE $table AS  {DATEQUERY};")
+            query = template_to_query_substitution(
+                f"CREATE TABLE $table AS  {DATEQUERY};", substitution_dict
             )
-            query = template.substitute(table=(table_name), path=(csv_file))
             duckdb.sql(query)
             print(f"Created new table '{table_name}'")
         except (duckdb.CatalogException, duckdb.Error):
-            template = Template("INSERT INTO $table SELECT * FROM read_csv('$path');")
-            query = template.substitute(table=(table_name), path=(csv_file))
+            template = f"INSERT INTO $table  {DATEQUERY};"
+            query = template_to_query_substitution(template, substitution_dict)
             print(query)
             duckdb.sql(query)
             print(f"Appended to existing table '{table_name}'")
 
     elif mode == "create_only":
-        template = Template("CREATE TABLE $table AS SELECT * FROM read_csv('$path');")
-        query = template.substitute(table=(table_name), path=(csv_file))
+        template = f"CREATE TABLE $table AS  {DATEQUERY};"
+        query = template_to_query_substitution(template, substitution_dict)
         duckdb.sql(query)
         print(f"Created new table '{table_name}'")
 

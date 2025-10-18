@@ -1,0 +1,12 @@
+freelytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DATABASE_PATH') }}"
+      extensions:
+        - parquet
+        - ducklake
+      attach:
+        - path: "ducklake:{{ env_var('DATALAKE_PATH') }}"
+          alias: datalake
