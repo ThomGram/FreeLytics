@@ -19,7 +19,13 @@ class TestJobAnalyzer:
                     "Data Analyst",
                     "Full Stack Developer",
                 ],
-                "job_category": ["Data Science", "Backend", "DevOps", "Data Science", "Full Stack"],
+                "job_category": [
+                    "Data Science",
+                    "Backend",
+                    "DevOps",
+                    "Data Science",
+                    "Full Stack",
+                ],
                 "company_location": [
                     "Paris, France",
                     "Lyon, France",
@@ -34,14 +40,26 @@ class TestJobAnalyzer:
                     "250 - 999 salariés",
                     "50 - 99 salariés",
                 ],
-                "company_type": ["ESN", "Startup", "ESN", "Cabinet de recrutement", "ESN"],
+                "company_type": [
+                    "ESN",
+                    "Startup",
+                    "ESN",
+                    "Cabinet de recrutement",
+                    "ESN",
+                ],
                 "contract_CDI": [True, False, True, True, False],
                 "contract_Freelance": [False, True, False, False, True],
                 "salary_min": ["45000", "50000", "", "40000", "48000"],
                 "salary_max": ["55000", "60000", "", "45000", "55000"],
                 "daily_rate_min": ["", "400", "500", "", "450"],
                 "daily_rate_max": ["", "500", "600", "", "550"],
-                "remote_work": ["Hybride", "Full Remote", "Présentiel", "Hybride", "Full Remote"],
+                "remote_work": [
+                    "Hybride",
+                    "Full Remote",
+                    "Présentiel",
+                    "Hybride",
+                    "Full Remote",
+                ],
                 "start_date_asap": [True, False, True, False, False],
                 "publication_date": [
                     pd.Timestamp("2024-01-15"),
@@ -65,7 +83,13 @@ class TestJobAnalyzer:
                     "SQL, Tableau, Excel",
                     "React, Node.js, MongoDB",
                 ],
-                "experience_required": ["3-5 ans", "Junior", "5+ ans", "1-3 ans", "2-4 ans"],
+                "experience_required": [
+                    "3-5 ans",
+                    "Junior",
+                    "5+ ans",
+                    "1-3 ans",
+                    "2-4 ans",
+                ],
             }
         )
 
@@ -175,8 +199,28 @@ class TestJobAnalyzer:
                     "DevOps",
                     "DevOps",
                 ],
-                "salary_min": ["40000", "50000", "60000", "45000", "55000", "", "", "", "48000"],
-                "salary_max": ["45000", "55000", "70000", "50000", "65000", "", "", "", "52000"],
+                "salary_min": [
+                    "40000",
+                    "50000",
+                    "60000",
+                    "45000",
+                    "55000",
+                    "",
+                    "",
+                    "",
+                    "48000",
+                ],
+                "salary_max": [
+                    "45000",
+                    "55000",
+                    "70000",
+                    "50000",
+                    "65000",
+                    "",
+                    "",
+                    "",
+                    "52000",
+                ],
                 "daily_rate_min": ["", "", "500", "400", "", "450", "500", "550", ""],
                 "daily_rate_max": ["", "", "600", "500", "", "550", "600", "650", ""],
             }
@@ -193,7 +237,9 @@ class TestJobAnalyzer:
         assert ds_stats["count"] == 3
         assert ds_stats["min"] == 40000.0  # Min of [40000, 50000, 60000]
         assert ds_stats["max"] == 60000.0  # Max of [40000, 50000, 60000]
-        assert ds_stats["mean"] == pytest.approx(50000.0, rel=1e-2)  # (40000+50000+60000)/3
+        assert ds_stats["mean"] == pytest.approx(
+            50000.0, rel=1e-2
+        )  # (40000+50000+60000)/3
 
         # Backend category should have 2 entries
         backend_stats = result.loc["Backend"]
@@ -212,7 +258,9 @@ class TestJobAnalyzer:
         assert ds_stats["count"] == 3
         assert ds_stats["min"] == 45000.0  # Min of [45000, 55000, 70000]
         assert ds_stats["max"] == 70000.0  # Max of [45000, 55000, 70000]
-        assert ds_stats["mean"] == pytest.approx(56666.67, rel=1e-2)  # (45000+55000+70000)/3
+        assert ds_stats["mean"] == pytest.approx(
+            56666.67, rel=1e-2
+        )  # (45000+55000+70000)/3
 
         # Backend category should have 2 entries
         backend_stats = result.loc["Backend"]
@@ -272,7 +320,9 @@ class TestJobAnalyzer:
             in_salary_max = category in salary_max_result.index
             in_daily_rate_min = category in daily_rate_min_result.index
             in_daily_rate_max = category in daily_rate_max_result.index
-            assert in_salary_min or in_salary_max or in_daily_rate_min or in_daily_rate_max
+            assert (
+                in_salary_min or in_salary_max or in_daily_rate_min or in_daily_rate_max
+            )
         else:
             # Category should not exist in any result
             assert category not in salary_min_result.index
@@ -484,7 +534,9 @@ class TestJobAnalyzer:
             (result["job_category"] == "Data Science") & (result["skill"] == "Python")
         ]
         assert len(ds_python) > 0
-        assert ds_python["frequency"].iloc[0] == 4  # Python appears in all 4 Data Science jobs
+        assert (
+            ds_python["frequency"].iloc[0] == 4
+        )  # Python appears in all 4 Data Science jobs
 
     def test_get_cloud_provider_frequency_by_category(self, categorical_analysis_data):
         """Test cloud provider frequency analysis by job category."""
@@ -515,10 +567,13 @@ class TestJobAnalyzer:
 
         # Check specific data: AWS appears twice in Data Science (out of 4 jobs)
         ds_aws = result[
-            (result["job_category"] == "Data Science") & (result["cloud_provider"] == "AWS")
+            (result["job_category"] == "Data Science")
+            & (result["cloud_provider"] == "AWS")
         ]
         assert len(ds_aws) > 0
-        assert ds_aws["frequency"].iloc[0] == 1  # AWS appears 1 time in 4 Data Science jobs
+        assert (
+            ds_aws["frequency"].iloc[0] == 1
+        )  # AWS appears 1 time in 4 Data Science jobs
 
     def test_empty_dataframe_categorical_analysis(self):
         """Test categorical analysis methods with empty DataFrame."""

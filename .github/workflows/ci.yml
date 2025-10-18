@@ -70,14 +70,10 @@ jobs:
       run: |
         uv sync --extra test --extra dev
 
-    - name: Check code formatting with black
-      run: uv run black --check --diff src/ tests/
-
-    - name: Check import sorting with isort
-      run: uv run isort --check-only --diff src/ tests/
-
-    - name: Lint with ruff
-      run: uv run ruff check src/ tests/
+    - name: Lint and check formatting with ruff
+      run: |
+        uv run ruff check src/ tests/
+        uv run ruff format --check src/ tests/
 
   security:
     runs-on: ubuntu-latest

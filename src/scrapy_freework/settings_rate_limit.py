@@ -2,7 +2,7 @@
 # This file contains conservative settings to avoid being rate limited
 
 # Basic rate limiting settings
-DOWNLOAD_DELAY = 2  # 2 seconds delay between requests
+DOWNLOAD_DELAY = 0.5  # 2 seconds delay between requests
 RANDOMIZE_DOWNLOAD_DELAY = 0.5  # Randomize delay (1.5 to 2.5 seconds)
 CONCURRENT_REQUESTS = 1  # Only 1 concurrent request
 CONCURRENT_REQUESTS_PER_DOMAIN = 1

@@ -103,7 +103,10 @@ class TestDataProcessing:
             (["CDI", "Freelance"], ["CDI", "Freelance"]),
             (["  CDI  ", " CDD ", ""], ["CDI", "CDD"]),  # With whitespace and empty
             ([], []),  # Empty list
-            (["Freelance", "freelance", "FREELANCE"], ["Freelance", "freelance", "FREELANCE"]),
+            (
+                ["Freelance", "freelance", "FREELANCE"],
+                ["Freelance", "freelance", "FREELANCE"],
+            ),
         ],
     )
     def test_contract_types_processing(self, spider, input_list, expected):
@@ -116,10 +119,19 @@ class TestDataProcessing:
     @pytest.mark.parametrize(
         "input_list,expected",
         [
-            (["Python", "SQL", "Machine Learning"], ["Python", "SQL", "Machine Learning"]),
-            (["  Python  ", " SQL ", ""], ["Python", "SQL"]),  # With whitespace and empty
+            (
+                ["Python", "SQL", "Machine Learning"],
+                ["Python", "SQL", "Machine Learning"],
+            ),
+            (
+                ["  Python  ", " SQL ", ""],
+                ["Python", "SQL"],
+            ),  # With whitespace and empty
             ([], []),  # Empty list
-            (["Python", "python", "PYTHON"], ["Python", "python", "PYTHON"]),  # Case preserved
+            (
+                ["Python", "python", "PYTHON"],
+                ["Python", "python", "PYTHON"],
+            ),  # Case preserved
         ],
     )
     def test_skills_processing(self, spider, input_list, expected):

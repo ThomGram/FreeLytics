@@ -185,12 +185,16 @@ def create_plots(df: pd.DataFrame, analysis_results: dict):
     # 6. Contract types distribution
     ax6 = axes[2, 0]
     contract_cols = [
-        col for col in df.columns if col.startswith("contract_") and col != "contract_types"
+        col
+        for col in df.columns
+        if col.startswith("contract_") and col != "contract_types"
     ]
     if contract_cols:
         # Sum boolean columns
         contract_sums = df[contract_cols].sum().sort_values(ascending=False)
-        contract_sums.index = [col.replace("contract_", "") for col in contract_sums.index]
+        contract_sums.index = [
+            col.replace("contract_", "") for col in contract_sums.index
+        ]
         if len(contract_sums) > 0:
             contract_sums.plot(kind="bar", ax=ax6, color="purple")
             ax6.set_title("Contract Types Distribution")

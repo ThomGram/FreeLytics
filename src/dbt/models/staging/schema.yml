@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: stg_job_listings
+    columns:
+      - name: job_url
+        tests:
+          - unique
+          - not_null
