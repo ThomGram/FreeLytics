@@ -1,0 +1,5 @@
+# This file was automatically generated
+name: freelytics_warehouse
+type: duckdb
+options:
+  filename: freelytics_warehouse.duckdb
