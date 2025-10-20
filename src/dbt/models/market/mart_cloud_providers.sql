@@ -13,7 +13,6 @@ WITH skills_data AS (
 )
 
 select
-  dim_job_category,
   skill as cloud_provider,
   date_trunc('month', dim_published_at) as month,
 
@@ -32,6 +31,6 @@ select
   quantile_cont(fact_salary_max, [0.0, 0.25, 0.5, 0.75, 1.0]) as salary_max_quantiles
 
 from skills_data
-where skill in ('Azure', 'AWS Cloud', 'Google Cloud Provider (GCP)')
-GROUP BY dim_job_category, date_trunc('month', dim_published_at), skill
-ORDER BY date_trunc('month', dim_published_at) DESC, dim_job_category, skill
+where skill in ('Azure', 'AWS Cloud', 'Google Cloud Platform (GCP)')
+GROUP BY date_trunc('month', dim_published_at), skill
+ORDER BY date_trunc('month', dim_published_at) DESC, skill
