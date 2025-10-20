@@ -32,65 +32,63 @@ where month >= current_date - interval '${inputs.time_range.value}' month
 order by month desc, total_jobs desc
 ```
 
-### Nombre d'annonces par categorie
+### Nombre d'annonces par rôle
 
 <LineChart
     data={general_stats}
-    title="Evolution du nombre d'annonces par categorie"
+    title="Evolution du nombre d'annonces par rôle"
     x=month
     y=total_jobs
     series=dim_job_category
 />
 
-### TJM Min et Max par categorie
+### TJM Min et Max moyen par rôle
 
 <LineChart
     data={general_stats}
-    title="TJM Min par categorie"
+    title="TJM Min moyen par rôle"
     x=month
     y=mean_daily_rate_min
     series=dim_job_category
-    yAxisTitle="TJM Min (EUR)"
+    yAxisTitle="TJM Min moyen (EUR)"
 />
 
 <LineChart
     data={general_stats}
-    title="TJM Max par categorie"
+    title="TJM Max moyen par rôle"
     x=month
     y=mean_daily_rate_max
     series=dim_job_category
-    yAxisTitle="TJM Max (EUR)"
+    yAxisTitle="TJM Max moyen (EUR)"
 />
 
-### Salaire Min et Max par categorie
+### Salaire Min et Max moyen par rôle
 
 <LineChart
     data={general_stats}
-    title="Salaire Min par categorie"
+    title="Salaire Min moyen par rôle"
     x=month
     y=mean_salary_min
     series=dim_job_category
-    yAxisTitle="Salaire Min (EUR)"
+    yAxisTitle="Salaire Min moyen (EUR)"
 />
 
 <LineChart
     data={general_stats}
-    title="Salaire Max par categorie"
+    title="Salaire Max moyen par rôle"
     x=month
     y=mean_salary_max
     series=dim_job_category
-    yAxisTitle="Salaire Max (EUR)"
+    yAxisTitle="Salaire Max moyen (EUR)"
 />
 
-### Pourcentage Remote par categorie
+### Part d'offres Full Remote par rôle
 
 ```sql remote_by_cat
 select
     dim_job_category,
     month,
-    pct_full_remote as "Full Remote",
-    pct_hybrid as "Hybride",
-    pct_on_site as "Sur site"
+    pct_full_remote/100 as "Full Remote",
 from freelytics_warehouse.mart_monthly_by_job_cat
 where month >= current_date - interval '${inputs.time_range.value}' month
 order by month desc
@@ -98,9 +96,9 @@ order by month desc
 
 <BarChart
     data={remote_by_cat}
-    title="Distribution Remote par categorie"
+    title="Distribution Full Remote par rôle"
     x=month
-    y={["Full Remote", "Hybride", "Sur site"]}
+    y={["Full Remote"]}
     series=dim_job_category
     type=grouped
     yFmt=pct
