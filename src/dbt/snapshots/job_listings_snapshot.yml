@@ -2,7 +2,7 @@ snapshots:
   - name: job_listings_snapshot
     relation: ref('stg_raw_job_listings_deduped')
     config:
-      schema: snapshots
+      # schema: snapshots
       database: freelytics_warehouse
       unique_key: job_url
       strategy: timestamp
