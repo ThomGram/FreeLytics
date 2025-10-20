@@ -138,7 +138,7 @@ order by month desc, skill_occurence desc
 
 <LineChart
     data={cloud_stats}
-    title="TJM Min par Cloud Provider"
+    title="TJM Min moyen par Cloud Provider"
     x=month
     y=mean_daily_rate_min
     series=cloud_provider
@@ -147,7 +147,7 @@ order by month desc, skill_occurence desc
 
 <LineChart
     data={cloud_stats}
-    title="TJM Max par Cloud Provider"
+    title="TJM Max moyen par Cloud Provider"
     x=month
     y=mean_daily_rate_max
     series=cloud_provider
@@ -158,7 +158,7 @@ order by month desc, skill_occurence desc
 
 <LineChart
     data={cloud_stats}
-    title="Salaire Min par Cloud Provider"
+    title="Salaire Min moyen par Cloud Provider"
     x=month
     y=mean_salary_min
     series=cloud_provider
@@ -167,7 +167,7 @@ order by month desc, skill_occurence desc
 
 <LineChart
     data={cloud_stats}
-    title="Salaire Max par Cloud Provider"
+    title="Salaire Max moyen par Cloud Provider"
     x=month
     y=mean_salary_max
     series=cloud_provider
@@ -194,17 +194,17 @@ select
     mean_daily_rate_max,
     mean_salary_min,
     mean_salary_max,
-    pct_full_remote,
-    pct_hybrid,
-    pct_on_site,
-    pct_junior,
-    pct_confirme,
-    pct_senior,
-    pct_expert,
+    pct_full_remote/100 as pct_full_remote,
+    pct_hybrid/100 as pct_hybrid,
+    pct_on_site/100 as pct_on_site,
+    pct_junior/100 as pct_junior,
+    pct_confirme/100 as pct_confirme,
+    pct_senior/100 as pct_senior,
+    pct_expert/100 as pct_expert,
     mean_duration,
-    pct_open_to_freelance,
-    pct_open_to_cdi,
-    pct_open_to_cdd
+    pct_open_to_freelance/100 as pct_open_to_freelance,
+    pct_open_to_cdi/100 as pct_open_to_cdi,
+    pct_open_to_cdd/100 as pct_open_to_cdd
 from freelytics_warehouse.mart_monthly_by_job_cat
 where dim_job_category = '${inputs.job_category.value}'
     and month >= current_date - interval '${inputs.time_range.value}' month
@@ -295,14 +295,14 @@ limit 10
     swapXY=true
 />
 
-### Top 10 Skills (Mois en cours)
+### Top 10 Skills (Mois précédent)
 
 ```sql top_skills_current_month
 select
     skill,
     sum(skill_occurence) as total_occurences
 from freelytics_warehouse.mart_skills_by_job_cat_by_month
-where month = date_trunc('month', current_date)
+where month = date_trunc('month', current_date - interval '1 month')
 group by skill
 order by total_occurences desc
 limit 10
@@ -310,12 +310,64 @@ limit 10
 
 <BarChart
     data={top_skills_current_month}
-    title="Top 10 Skills ce mois"
+    title="Top 10 Skills mois précédent"
     x=skill
     y=total_occurences
     swapXY=true
 />
 
+
+## Top Skills par rôle
+
+
+<Dropdown name=job_category>
+    <DropdownOption value="data engineer" valueLabel="Data Engineering"/>
+    <DropdownOption value="data scientist" valueLabel="Data Science"/>
+    <DropdownOption value="analytics engineer" valueLabel="Analytics Engineering"/>
+</Dropdown>
+
+### Top 10 Skills (All Time)
+
+```sql top_skills_all_time
+select
+    skill,
+    sum(skill_occurence) as total_occurences
+from freelytics_warehouse.mart_skills_by_job_cat_by_month
+where dim_job_category = '${inputs.job_category.value}'
+
+group by skill, '${inputs.job_category.value}'
+order by total_occurences desc
+limit 10
+```
+
+<BarChart
+    data={top_skills_all_time}
+    title="Top 10 Skills All Time"
+    x=skill
+    y=total_occurences
+    swapXY=true
+/>
+
+### Top 10 Skills (Mois précédent)
+
+```sql top_skills_current_month
+select
+    skill,
+    sum(skill_occurence) as total_occurences
+from freelytics_warehouse.mart_skills_by_job_cat_by_month
+where month = date_trunc('month', current_date - interval '1 month') and  dim_job_category = '${inputs.job_category.value}'
+group by skill, '${inputs.job_category.value}'
+order by total_occurences desc
+limit 10
+```
+
+<BarChart
+    data={top_skills_current_month}
+    title="Top 10 Skills mois précédent"
+    x=skill
+    y=total_occurences
+    swapXY=true
+/>
     </Tab>
 
     <Tab label="Companies">
@@ -328,9 +380,9 @@ select
     sum(total_jobs) as total_jobs,
     avg(mean_daily_rate_max) as avg_tjm,
     avg(mean_salary_max) as avg_salary,
-    avg(pct_open_to_freelance) as prop_freelance,
-    avg(pct_open_to_cdi) as prop_cdi,
-    avg(pct_full_remote) as pct_remote
+    avg(pct_open_to_freelance)/100 as prop_freelance,
+    avg(pct_open_to_cdi)/100 as prop_cdi,
+    avg(pct_full_remote)/100 as pct_remote
 from freelytics_warehouse.mart_monthly_by_company
 where month >= current_date - interval '${inputs.time_range.value}' month
 group by dim_company_name
