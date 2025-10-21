@@ -10,22 +10,35 @@ DATEQUERY = """
 with split_str as
     (select *,
         case
-            when '-' in publication_date
-                then left(publication_date, instr(publication_date, '-')-2)
+            when ' - ' in publication_date
+                then trim(left(publication_date, instr(publication_date, ' - ')-1))
                 else publication_date end as published_at_str,
         case
-            when '-' in publication_date
-                then right(publication_date, instr(publication_date, '-'))
+            when ' - ' in publication_date
+                then trim(right(publication_date, length(publication_date) - instr(publication_date, ' - ') - 2))
                 else null end as updated_at_str
-        from read_csv('$path'))
-select *,
-        strptime(right(published_at_str, 10), '%d/%m/%Y')  as published_at,
+        from read_csv('$path', header=true, auto_detect=true)),
+date_extracted as
+    (select *,
+        regexp_extract(published_at_str, '(\d{2}/\d{2}/\d{4})', 1) as pub_date_str,
+        regexp_extract(updated_at_str, '(\d{2}/\d{2}/\d{4})', 1) as upd_date_str
+        from split_str)
+select
+        job_title, job_url, job_category, company_name, contract_types,
+        description, company_description, publication_date, skills,
+        start_date, duration, salary, daily_rate, experience, remote_work, location, published_at_str, updated_at_str,
         case
-            when updated_at_str is not null
-                then strptime(right(updated_at_str, 10), '%d/%m/%Y')
-                else strptime(right(published_at_str, 10), '%d/%m/%Y') end as updated_at,
+            when pub_date_str != '' and pub_date_str is not null
+                then strptime(pub_date_str, '%d/%m/%Y')
+                else null end as published_at,
+        case
+            when upd_date_str != '' and upd_date_str is not null
+                then strptime(upd_date_str, '%d/%m/%Y')
+            when pub_date_str != '' and pub_date_str is not null
+                then strptime(pub_date_str, '%d/%m/%Y')
+                else null end as updated_at,
         current_timestamp as inserted_at
-        from split_str;
+        from date_extracted
 
 
 """
